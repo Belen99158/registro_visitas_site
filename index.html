@@ -38,14 +38,13 @@ body { font-family: system-ui, sans-serif; background: #f5f5f2; color: #1a1a18; 
 .submit-btn:disabled { opacity: .45; cursor: not-allowed; }
 .submit-btn:not(:disabled):hover { background: #0C447C; }
 .lock-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 3rem 1.5rem; gap: 1rem; text-align: center; }
-.lock-screen .lock-icon { font-size: 48px; color: #888; }
+.lock-icon { font-size: 48px; color: #888; }
 .lock-screen h3 { font-size: 16px; font-weight: 500; }
 .lock-screen p { font-size: 13px; color: #666; }
 .pin-wrap { display: flex; gap: 8px; width: 100%; max-width: 280px; }
 .pin-wrap input { flex: 1; padding: 10px 12px; border: 0.5px solid rgba(0,0,0,.25); border-radius: 8px; font-size: 18px; text-align: center; letter-spacing: 6px; }
 .pin-wrap input.pin-err { border-color: #E24B4A; background: #FCEBEB; }
 .pin-wrap button { padding: 10px 18px; border: none; border-radius: 8px; background: #185FA5; color: #fff; font-size: 14px; font-weight: 500; cursor: pointer; }
-.pin-wrap button:hover { background: #0C447C; }
 #pin-error { color: #A32D2D; font-size: 12px; display: none; }
 .admin-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
 .admin-top h2 { font-size: 16px; font-weight: 500; }
@@ -82,7 +81,7 @@ body { font-family: system-ui, sans-serif; background: #f5f5f2; color: #1a1a18; 
 .icon-btn.del:hover { background: #FCEBEB; color: #A32D2D; border-color: #E24B4A; }
 .empty { text-align: center; padding: 3rem 1rem; color: #888; }
 .empty i { font-size: 40px; margin-bottom: .75rem; display: block; }
-.loading { text-align: center; padding: 2rem; color: #888; font-size: 14px; }
+.loading { text-align: center; padding: 2rem; color: #888; font-size: 14px; display: flex; align-items: center; justify-content: center; gap: 8px; }
 .toast { position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%); background: #1D9E75; color: #fff; padding: 10px 20px; border-radius: 8px; font-size: 14px; font-weight: 500; z-index: 9999; opacity: 0; transition: opacity .3s; white-space: nowrap; pointer-events: none; }
 .toast.show { opacity: 1; }
 .toast.err { background: #D85A30; }
@@ -242,9 +241,9 @@ body { font-family: system-ui, sans-serif; background: #f5f5f2; color: #1a1a18; 
 
 <script>
 // ============================================================
-//  PEGA AQUÍ TU URL DE GOOGLE APPS SCRIPT
+//  PEGA AQUÍ TU URL DE GOOGLE APPS SCRIPT  (termina en /exec)
 // ============================================================
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzZqZ8_jdqjVNjwM7eJ7gjmlLyM4-YnDhTr5rhAk5U-212C9pELdwoPetLwdz3G6oNInQ/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz4gz2jxdGtbwzqTzh9uidxwg2ddpwoCKW-lwneRd_UUVaWPLz_eH2D9h1VSaoG43I_Jg/exec';
 // ============================================================
 
 const ADMIN_PIN = '2025';
@@ -252,19 +251,10 @@ let selectedMotivo = '';
 let locationData   = null;
 let allRecords     = [];
 
-/* ---- API calls ---- */
-async function apiGet(params) {
-  const url = SCRIPT_URL + '?' + new URLSearchParams(params);
-  const res  = await fetch(url);
-  return res.json();
-}
-
-async function apiPost(body) {
-  const res = await fetch(SCRIPT_URL, {
-    method: 'POST',
-    body:   JSON.stringify(body)
-  });
-  return res.json();
+/* ---- llamada GET a Apps Script (no tiene problemas de CORS) ---- */
+function api(params) {
+  const url = SCRIPT_URL + '?' + new URLSearchParams(params).toString();
+  return fetch(url, { redirect: 'follow' }).then(r => r.json());
 }
 
 /* ---- Tabs ---- */
@@ -344,7 +334,7 @@ function getLocation() {
   );
 }
 
-/* ---- Form ---- */
+/* ---- Validar formulario ---- */
 function checkReady() {
   const ok = document.getElementById('asesor').value &&
              document.getElementById('cliente').value.trim() &&
@@ -353,6 +343,7 @@ function checkReady() {
   document.getElementById('submit-btn').disabled = !ok;
 }
 
+/* ---- Enviar registro ---- */
 async function submitForm() {
   const asesor  = document.getElementById('asesor').value;
   const cliente = document.getElementById('cliente').value.trim();
@@ -364,23 +355,28 @@ async function submitForm() {
   btn.innerHTML = '<i class="ti ti-loader-2" style="font-size:18px"></i> Guardando...';
 
   const now = new Date();
-  const record = {
-    action:  'insert',
-    id:      Date.now(),
-    asesor, cliente,
-    km:      parseInt(km),
-    motivo:  selectedMotivo,
-    lat:     locationData.lat,
-    lng:     locationData.lng,
-    acc:     locationData.acc,
-    fecha:   now.toISOString().split('T')[0],
-    hora:    now.toTimeString().slice(0, 5)
-  };
 
   try {
-    await apiPost(record);
-    showToast('✓ Visita registrada correctamente', false);
-    resetForm();
+    const res = await api({
+      action:  'insert',
+      id:      Date.now(),
+      asesor,
+      cliente,
+      km:      parseInt(km),
+      motivo:  selectedMotivo,
+      lat:     locationData.lat,
+      lng:     locationData.lng,
+      acc:     locationData.acc,
+      fecha:   now.toISOString().split('T')[0],
+      hora:    now.toTimeString().slice(0, 5)
+    });
+
+    if (res.ok) {
+      showToast('✓ Visita registrada correctamente', false);
+      resetForm();
+    } else {
+      throw new Error(res.error || 'Error desconocido');
+    }
   } catch(e) {
     showToast('Error al guardar. Verifica conexión.', true);
     btn.disabled = false;
@@ -399,23 +395,22 @@ function resetForm() {
   document.getElementById('loc-icon').className   = 'ti ti-current-location';
   document.getElementById('loc-text').textContent = 'Toca para obtener tu ubicación actual';
   document.getElementById('map-container').style.display = 'none';
-  document.getElementById('submit-btn').disabled  = false;
+  document.getElementById('submit-btn').disabled  = true;
   document.getElementById('submit-btn').innerHTML =
     '<i class="ti ti-circle-check" style="font-size:18px"></i> Registrar visita';
-  checkReady();
 }
 
-/* ---- Admin ---- */
+/* ---- Admin: filtrar y renderizar ---- */
 function getFiltered() {
   const desde  = document.getElementById('f-desde').value;
   const hasta  = document.getElementById('f-hasta').value;
   const asesor = document.getElementById('f-asesor').value;
   const motivo = document.getElementById('f-motivo').value;
   return allRecords.filter(r => {
-    if (desde  && r.Fecha   < desde)    return false;
-    if (hasta  && r.Fecha   > hasta)    return false;
-    if (asesor && r.Asesor !== asesor)  return false;
-    if (motivo && r.Motivo.toLowerCase() !== motivo) return false;
+    if (desde  && r.Fecha < desde)   return false;
+    if (hasta  && r.Fecha > hasta)   return false;
+    if (asesor && r.Asesor !== asesor) return false;
+    if (motivo && (r.Motivo || '').toLowerCase() !== motivo) return false;
     return true;
   });
 }
@@ -426,7 +421,7 @@ async function renderAdmin() {
   document.getElementById('stats-row').innerHTML = '';
 
   try {
-    const data = await apiGet({ action: 'getAll' });
+    const data = await api({ action: 'getAll' });
     allRecords = data.records || [];
   } catch(e) {
     document.getElementById('admin-records').innerHTML =
@@ -435,8 +430,8 @@ async function renderAdmin() {
   }
 
   const fr     = getFiltered();
-  const cobros = fr.filter(r => r.Motivo && r.Motivo.toLowerCase() === 'cobro').length;
-  const ventas = fr.filter(r => r.Motivo && r.Motivo.toLowerCase() === 'venta').length;
+  const cobros = fr.filter(r => (r.Motivo || '').toLowerCase() === 'cobro').length;
+  const ventas = fr.filter(r => (r.Motivo || '').toLowerCase() === 'venta').length;
 
   document.getElementById('stats-row').innerHTML =
     '<div class="stat"><div class="val">' + fr.length + '</div><div class="lbl">Total registros</div></div>' +
@@ -458,15 +453,19 @@ async function renderAdmin() {
         '<div class="record-name">' + nombre + '</div>' +
         '<div class="record-meta">' +
           '<span class="badge badge-' + motivo + '">' + (r.Motivo || '').toUpperCase() + '</span>' +
-          '<span class="badge badge-km"><i class="ti ti-car" style="font-size:11px"></i> ' + Number(r.Kilometraje || 0).toLocaleString() + ' km</span>' +
+          '<span class="badge badge-km"><i class="ti ti-car" style="font-size:11px"></i> ' +
+            Number(r.Kilometraje || 0).toLocaleString() + ' km</span>' +
           '<span class="badge-date">' + (r.Fecha || '') + ' ' + (r.Hora || '') + '</span>' +
         '</div>' +
         (r.Cliente ? '<div class="record-cliente"><i class="ti ti-building-store" style="font-size:11px"></i> ' + r.Cliente + '</div>' : '') +
-        '<div class="record-loc"><i class="ti ti-map-pin" style="font-size:11px"></i> ' + (r.Latitud || '') + ', ' + (r.Longitud || '') + '</div>' +
+        '<div class="record-loc"><i class="ti ti-map-pin" style="font-size:11px"></i> ' +
+          (r.Latitud || '') + ', ' + (r.Longitud || '') + '</div>' +
       '</div>' +
       '<div class="record-actions">' +
-        '<button class="icon-btn map" onclick="openMap(\'' + r.Latitud + '\',\'' + r.Longitud + '\')" title="Ver en Maps"><i class="ti ti-map-2"></i></button>' +
-        '<button class="icon-btn del" onclick="deleteRecord(\'' + r.ID + '\')" title="Eliminar"><i class="ti ti-trash"></i></button>' +
+        '<button class="icon-btn map" onclick="openMap(\'' + r.Latitud + '\',\'' + r.Longitud + '\')" title="Ver en Maps">' +
+          '<i class="ti ti-map-2"></i></button>' +
+        '<button class="icon-btn del" onclick="deleteRecord(\'' + r.ID + '\')" title="Eliminar">' +
+          '<i class="ti ti-trash"></i></button>' +
       '</div>' +
     '</div>';
   }).join('');
@@ -479,7 +478,7 @@ function openMap(lat, lng) {
 async function deleteRecord(id) {
   if (!confirm('¿Eliminar este registro?')) return;
   try {
-    await apiGet({ action: 'delete', id });
+    await api({ action: 'delete', id });
     showToast('Registro eliminado', false);
     renderAdmin();
   } catch(e) {
@@ -487,6 +486,7 @@ async function deleteRecord(id) {
   }
 }
 
+/* ---- Exportar Excel ---- */
 function exportExcel() {
   const fr = getFiltered();
   if (!fr.length) { showToast('No hay registros para exportar', true); return; }
@@ -501,7 +501,7 @@ function exportExcel() {
     'Kilometraje':      r.Kilometraje   || '',
     'Latitud':          r.Latitud       || '',
     'Longitud':         r.Longitud      || '',
-    'Precisión GPS(m)': r.Precision_GPS || '',
+    'Precision GPS(m)': r.Precision_GPS || '',
     'Google Maps': 'https://maps.google.com/?q=' + r.Latitud + ',' + r.Longitud
   }));
   const ws = XLSX.utils.json_to_sheet(data);
@@ -512,6 +512,7 @@ function exportExcel() {
   showToast('Excel descargado', false);
 }
 
+/* ---- Toast ---- */
 function showToast(msg, isErr) {
   const t = document.getElementById('toast');
   t.textContent = msg;
