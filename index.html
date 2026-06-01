@@ -377,13 +377,13 @@ let allRecords = [];
 
 async function loadRecords() {
   try {
-    const r = await window.storage.get('visitas_records');
-    allRecords = r ? JSON.parse(r.value) : [];
+    const r = localStorage.getItem('visitas_records');
+    allRecords = r ? JSON.parse(r) : [];
   } catch(e) { allRecords = []; }
 }
 
 async function saveRecords() {
-  await window.storage.set('visitas_records', JSON.stringify(allRecords));
+  localStorage.setItem('visitas_records', JSON.stringify(allRecords));
 }
 
 function showTab(tab) {
