@@ -7,119 +7,85 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.7.0/dist/tabler-icons.min.css">
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: system-ui, sans-serif; background: #f5f5f2; color: #1a1a18; min-height: 100vh; }
-  .app { max-width: 480px; margin: 0 auto; min-height: 100vh; display: flex; flex-direction: column; }
- 
-  /* Header */
-  .header { padding: 1.25rem 1rem 0; text-align: center; }
-  .header h1 { font-size: 18px; font-weight: 500; }
-  .header p { font-size: 12px; color: #666; margin-top: 2px; }
- 
-  /* Tabs */
-  .tabs { display: flex; margin: 1rem 1rem 0; background: #eae8e0; border-radius: 12px; padding: 3px; }
-  .tab { flex: 1; padding: 9px 8px; border: none; background: transparent; border-radius: 10px; font-size: 13px; font-weight: 500; color: #555; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 5px; transition: all .2s; }
-  .tab.active { background: #fff; color: #1a1a18; box-shadow: 0 1px 3px rgba(0,0,0,.12); }
- 
-  /* Content */
-  .content { flex: 1; padding: 1rem; }
- 
-  /* Cards */
-  .card { background: #fff; border: 0.5px solid rgba(0,0,0,.12); border-radius: 12px; padding: 1.25rem; margin-bottom: 1rem; }
-  .card-title { font-size: 13px; font-weight: 500; color: #555; margin-bottom: 1rem; display: flex; align-items: center; gap: 6px; }
- 
-  /* Fields */
-  .field { margin-bottom: 1rem; }
-  .field:last-child { margin-bottom: 0; }
-  .field label { display: block; font-size: 12px; color: #555; margin-bottom: 5px; font-weight: 500; }
-  .field select, .field input[type="number"], .field input[type="text"], .field input[type="date"], .field input[type="password"] {
-    width: 100%; padding: 9px 12px; border: 0.5px solid rgba(0,0,0,.25); border-radius: 8px;
-    font-size: 14px; background: #fff; color: #1a1a18; appearance: auto;
-  }
-  .field select:focus, .field input:focus { outline: none; box-shadow: 0 0 0 2px #185FA5; border-color: #185FA5; }
- 
-  /* Motivo buttons */
-  .motivo-group { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-  .motivo-btn { padding: 10px 8px; border: 0.5px solid rgba(0,0,0,.2); border-radius: 8px; background: #fff; color: #555; font-size: 13px; font-weight: 500; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all .15s; }
-  .motivo-btn.sel-cobro { background: #E1F5EE; border-color: #0F6E56; color: #085041; }
-  .motivo-btn.sel-venta { background: #E6F1FB; border-color: #185FA5; color: #0C447C; }
- 
-  /* Location button */
-  .loc-btn { width: 100%; padding: 10px 12px; border: 0.5px solid rgba(0,0,0,.2); border-radius: 8px; background: #fff; color: #555; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 8px; }
-  .loc-btn.got { border-color: #0F6E56; color: #085041; background: #E1F5EE; }
-  .loc-btn.err { border-color: #993C1D; color: #712B13; background: #FAECE7; }
-  .loc-text { flex: 1; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
-  #map-container { border-radius: 8px; overflow: hidden; height: 160px; display: none; border: 0.5px solid rgba(0,0,0,.15); margin-top: 10px; }
-  #map-frame { width: 100%; height: 100%; border: none; }
- 
-  /* Submit */
-  .submit-btn { width: 100%; padding: 13px; border: none; border-radius: 8px; background: #185FA5; color: #fff; font-size: 15px; font-weight: 500; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; }
-  .submit-btn:disabled { opacity: .45; cursor: not-allowed; }
-  .submit-btn:not(:disabled):hover { background: #0C447C; }
- 
-  /* Lock screen */
-  .lock-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 3rem 1.5rem; gap: 1rem; text-align: center; }
-  .lock-screen .lock-icon { font-size: 48px; color: #888; }
-  .lock-screen h3 { font-size: 16px; font-weight: 500; }
-  .lock-screen p { font-size: 13px; color: #666; }
-  .pin-wrap { display: flex; gap: 8px; width: 100%; max-width: 280px; }
-  .pin-wrap input { flex: 1; padding: 10px 12px; border: 0.5px solid rgba(0,0,0,.25); border-radius: 8px; font-size: 18px; text-align: center; letter-spacing: 6px; }
-  .pin-wrap input.pin-err { border-color: #E24B4A; background: #FCEBEB; }
-  .pin-wrap button { padding: 10px 18px; border: none; border-radius: 8px; background: #185FA5; color: #fff; font-size: 14px; font-weight: 500; cursor: pointer; }
-  .pin-wrap button:hover { background: #0C447C; }
-  #pin-error { color: #A32D2D; font-size: 12px; display: none; }
- 
-  /* Admin panel */
-  .admin-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
-  .admin-top h2 { font-size: 16px; font-weight: 500; }
-  .btn-lock { padding: 6px 12px; border: 0.5px solid #A32D2D; border-radius: 8px; background: transparent; color: #A32D2D; font-size: 12px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 5px; }
-  .btn-lock:hover { background: #FCEBEB; }
- 
-  /* Filters */
-  .filter-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
-  .filter-field label { font-size: 11px; color: #555; margin-bottom: 3px; display: block; font-weight: 500; }
-  .filter-field select, .filter-field input { width: 100%; padding: 7px 10px; border: 0.5px solid rgba(0,0,0,.2); border-radius: 8px; font-size: 13px; background: #fff; color: #1a1a18; }
-  .filter-actions { display: flex; gap: 8px; margin-top: 8px; }
-  .btn-filter { flex: 1; padding: 9px; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; }
-  .btn-filter.blue { border: 0.5px solid #185FA5; background: transparent; color: #185FA5; }
-  .btn-filter.blue:hover { background: #E6F1FB; }
-  .btn-filter.green { border: 0.5px solid #0F6E56; background: transparent; color: #085041; }
-  .btn-filter.green:hover { background: #E1F5EE; }
- 
-  /* Stats */
-  .stats-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 1rem; }
-  .stat { background: #eae8e0; border-radius: 8px; padding: .75rem 1rem; }
-  .stat .val { font-size: 22px; font-weight: 500; }
-  .stat .lbl { font-size: 11px; color: #555; margin-top: 1px; }
- 
-  /* Records */
-  .record-card { background: #fff; border: 0.5px solid rgba(0,0,0,.1); border-radius: 12px; padding: 1rem; margin-bottom: .75rem; display: flex; gap: 10px; align-items: flex-start; }
-  .record-avatar { width: 38px; height: 38px; border-radius: 50%; background: #B5D4F4; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 500; color: #0C447C; flex-shrink: 0; }
-  .record-body { flex: 1; min-width: 0; }
-  .record-name { font-size: 14px; font-weight: 500; margin-bottom: 3px; }
-  .record-meta { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; margin-bottom: 3px; }
-  .badge { padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 500; }
-  .badge-cobro { background: #E1F5EE; color: #085041; }
-  .badge-venta { background: #E6F1FB; color: #0C447C; }
-  .badge-km { background: #F1EFE8; color: #444441; }
-  .badge-date { font-size: 11px; color: #666; }
-  .record-loc { font-size: 11px; color: #666; display: flex; align-items: center; gap: 4px; }
-  .record-actions { display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; }
-  .icon-btn { padding: 6px; border: 0.5px solid rgba(0,0,0,.12); border-radius: 8px; background: transparent; color: #555; cursor: pointer; display: flex; align-items: center; font-size: 16px; }
-  .icon-btn.map:hover { background: #E1F5EE; color: #0F6E56; border-color: #0F6E56; }
-  .icon-btn.del:hover { background: #FCEBEB; color: #A32D2D; border-color: #E24B4A; }
- 
-  /* Empty */
-  .empty { text-align: center; padding: 3rem 1rem; color: #888; }
-  .empty i { font-size: 40px; margin-bottom: .75rem; display: block; }
- 
-  /* Cliente field (visible on record) */
-  .record-cliente { font-size: 12px; color: #555; margin-top: 2px; }
- 
-  /* Toast */
-  .toast { position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%); background: #1D9E75; color: #fff; padding: 10px 20px; border-radius: 8px; font-size: 14px; font-weight: 500; z-index: 9999; opacity: 0; transition: opacity .3s; white-space: nowrap; pointer-events: none; }
-  .toast.show { opacity: 1; }
-  .toast.err { background: #D85A30; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: system-ui, sans-serif; background: #f5f5f2; color: #1a1a18; min-height: 100vh; }
+.app { max-width: 480px; margin: 0 auto; min-height: 100vh; display: flex; flex-direction: column; }
+.header { padding: 1.25rem 1rem 0; text-align: center; }
+.header h1 { font-size: 18px; font-weight: 500; }
+.header p { font-size: 12px; color: #666; margin-top: 2px; }
+.tabs { display: flex; margin: 1rem 1rem 0; background: #eae8e0; border-radius: 12px; padding: 3px; }
+.tab { flex: 1; padding: 9px 8px; border: none; background: transparent; border-radius: 10px; font-size: 13px; font-weight: 500; color: #555; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 5px; transition: all .2s; }
+.tab.active { background: #fff; color: #1a1a18; box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+.content { flex: 1; padding: 1rem; }
+.card { background: #fff; border: 0.5px solid rgba(0,0,0,.12); border-radius: 12px; padding: 1.25rem; margin-bottom: 1rem; }
+.card-title { font-size: 13px; font-weight: 500; color: #555; margin-bottom: 1rem; display: flex; align-items: center; gap: 6px; }
+.field { margin-bottom: 1rem; }
+.field:last-child { margin-bottom: 0; }
+.field label { display: block; font-size: 12px; color: #555; margin-bottom: 5px; font-weight: 500; }
+.field select, .field input { width: 100%; padding: 9px 12px; border: 0.5px solid rgba(0,0,0,.25); border-radius: 8px; font-size: 14px; background: #fff; color: #1a1a18; }
+.field select:focus, .field input:focus { outline: none; box-shadow: 0 0 0 2px #185FA5; border-color: #185FA5; }
+.motivo-group { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.motivo-btn { padding: 10px 8px; border: 0.5px solid rgba(0,0,0,.2); border-radius: 8px; background: #fff; color: #555; font-size: 13px; font-weight: 500; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all .15s; }
+.motivo-btn.sel-cobro { background: #E1F5EE; border-color: #0F6E56; color: #085041; }
+.motivo-btn.sel-venta { background: #E6F1FB; border-color: #185FA5; color: #0C447C; }
+.loc-btn { width: 100%; padding: 10px 12px; border: 0.5px solid rgba(0,0,0,.2); border-radius: 8px; background: #fff; color: #555; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+.loc-btn.got { border-color: #0F6E56; color: #085041; background: #E1F5EE; }
+.loc-btn.err { border-color: #993C1D; color: #712B13; background: #FAECE7; }
+.loc-text { flex: 1; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
+#map-container { border-radius: 8px; overflow: hidden; height: 160px; display: none; border: 0.5px solid rgba(0,0,0,.15); margin-top: 10px; }
+#map-frame { width: 100%; height: 100%; border: none; }
+.submit-btn { width: 100%; padding: 13px; border: none; border-radius: 8px; background: #185FA5; color: #fff; font-size: 15px; font-weight: 500; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; }
+.submit-btn:disabled { opacity: .45; cursor: not-allowed; }
+.submit-btn:not(:disabled):hover { background: #0C447C; }
+.lock-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 3rem 1.5rem; gap: 1rem; text-align: center; }
+.lock-screen .lock-icon { font-size: 48px; color: #888; }
+.lock-screen h3 { font-size: 16px; font-weight: 500; }
+.lock-screen p { font-size: 13px; color: #666; }
+.pin-wrap { display: flex; gap: 8px; width: 100%; max-width: 280px; }
+.pin-wrap input { flex: 1; padding: 10px 12px; border: 0.5px solid rgba(0,0,0,.25); border-radius: 8px; font-size: 18px; text-align: center; letter-spacing: 6px; }
+.pin-wrap input.pin-err { border-color: #E24B4A; background: #FCEBEB; }
+.pin-wrap button { padding: 10px 18px; border: none; border-radius: 8px; background: #185FA5; color: #fff; font-size: 14px; font-weight: 500; cursor: pointer; }
+.pin-wrap button:hover { background: #0C447C; }
+#pin-error { color: #A32D2D; font-size: 12px; display: none; }
+.admin-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
+.admin-top h2 { font-size: 16px; font-weight: 500; }
+.btn-lock { padding: 6px 12px; border: 0.5px solid #A32D2D; border-radius: 8px; background: transparent; color: #A32D2D; font-size: 12px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 5px; }
+.btn-lock:hover { background: #FCEBEB; }
+.filter-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+.filter-field label { font-size: 11px; color: #555; margin-bottom: 3px; display: block; font-weight: 500; }
+.filter-field select, .filter-field input { width: 100%; padding: 7px 10px; border: 0.5px solid rgba(0,0,0,.2); border-radius: 8px; font-size: 13px; background: #fff; color: #1a1a18; }
+.filter-actions { display: flex; gap: 8px; margin-top: 8px; }
+.btn-filter { flex: 1; padding: 9px; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; }
+.btn-filter.blue { border: 0.5px solid #185FA5; background: transparent; color: #185FA5; }
+.btn-filter.blue:hover { background: #E6F1FB; }
+.btn-filter.green { border: 0.5px solid #0F6E56; background: transparent; color: #085041; }
+.btn-filter.green:hover { background: #E1F5EE; }
+.stats-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 1rem; }
+.stat { background: #eae8e0; border-radius: 8px; padding: .75rem 1rem; }
+.stat .val { font-size: 22px; font-weight: 500; }
+.stat .lbl { font-size: 11px; color: #555; margin-top: 1px; }
+.record-card { background: #fff; border: 0.5px solid rgba(0,0,0,.1); border-radius: 12px; padding: 1rem; margin-bottom: .75rem; display: flex; gap: 10px; align-items: flex-start; }
+.record-avatar { width: 38px; height: 38px; border-radius: 50%; background: #B5D4F4; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 500; color: #0C447C; flex-shrink: 0; }
+.record-body { flex: 1; min-width: 0; }
+.record-name { font-size: 14px; font-weight: 500; margin-bottom: 3px; }
+.record-meta { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; margin-bottom: 3px; }
+.badge { padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 500; }
+.badge-cobro { background: #E1F5EE; color: #085041; }
+.badge-venta { background: #E6F1FB; color: #0C447C; }
+.badge-km { background: #F1EFE8; color: #444441; }
+.badge-date { font-size: 11px; color: #666; }
+.record-cliente { font-size: 12px; color: #444; margin-top: 2px; }
+.record-loc { font-size: 11px; color: #888; display: flex; align-items: center; gap: 4px; margin-top: 2px; }
+.record-actions { display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; }
+.icon-btn { padding: 6px; border: 0.5px solid rgba(0,0,0,.12); border-radius: 8px; background: transparent; color: #555; cursor: pointer; display: flex; align-items: center; font-size: 16px; }
+.icon-btn.map:hover { background: #E1F5EE; color: #0F6E56; border-color: #0F6E56; }
+.icon-btn.del:hover { background: #FCEBEB; color: #A32D2D; border-color: #E24B4A; }
+.empty { text-align: center; padding: 3rem 1rem; color: #888; }
+.empty i { font-size: 40px; margin-bottom: .75rem; display: block; }
+.loading { text-align: center; padding: 2rem; color: #888; font-size: 14px; }
+.toast { position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%); background: #1D9E75; color: #fff; padding: 10px 20px; border-radius: 8px; font-size: 14px; font-weight: 500; z-index: 9999; opacity: 0; transition: opacity .3s; white-space: nowrap; pointer-events: none; }
+.toast.show { opacity: 1; }
+.toast.err { background: #D85A30; }
 </style>
 </head>
 <body>
@@ -128,7 +94,7 @@
     <h1><i class="ti ti-map-pin" style="vertical-align:-2px"></i> Registro de visitas</h1>
     <p>Control de asesores en campo</p>
   </div>
- 
+
   <div class="tabs">
     <button class="tab active" onclick="showTab('asesor')" id="tab-asesor">
       <i class="ti ti-user" style="font-size:15px"></i> Asesor
@@ -137,7 +103,7 @@
       <i class="ti ti-shield" style="font-size:15px"></i> Admin
     </button>
   </div>
- 
+
   <!-- PESTAÑA ASESOR -->
   <div class="content" id="content-asesor">
     <div class="card">
@@ -181,7 +147,7 @@
         </div>
       </div>
     </div>
- 
+
     <div class="card">
       <div class="card-title"><i class="ti ti-map-pin" style="font-size:16px"></i> Ubicación GPS</div>
       <button class="loc-btn" id="loc-btn" onclick="getLocation()">
@@ -192,16 +158,14 @@
         <iframe id="map-frame" allowfullscreen></iframe>
       </div>
     </div>
- 
+
     <button class="submit-btn" id="submit-btn" onclick="submitForm()" disabled>
       <i class="ti ti-circle-check" style="font-size:18px"></i> Registrar visita
     </button>
   </div>
- 
+
   <!-- PESTAÑA ADMIN -->
   <div class="content" id="content-admin" style="display:none">
- 
-    <!-- Pantalla de bloqueo -->
     <div id="lock-wrap">
       <div class="lock-screen">
         <i class="ti ti-lock lock-icon"></i>
@@ -215,8 +179,7 @@
         <p id="pin-error">Código incorrecto. Intenta de nuevo.</p>
       </div>
     </div>
- 
-    <!-- Panel admin (oculto hasta autenticación) -->
+
     <div id="admin-panel" style="display:none">
       <div class="admin-top">
         <h2><i class="ti ti-clipboard-list" style="font-size:16px;vertical-align:-2px"></i> Registros</h2>
@@ -224,17 +187,11 @@
           <i class="ti ti-lock" style="font-size:14px"></i> Cerrar sesión
         </button>
       </div>
- 
+
       <div class="card">
         <div class="filter-row">
-          <div class="filter-field">
-            <label>Desde</label>
-            <input type="date" id="f-desde">
-          </div>
-          <div class="filter-field">
-            <label>Hasta</label>
-            <input type="date" id="f-hasta">
-          </div>
+          <div class="filter-field"><label>Desde</label><input type="date" id="f-desde"></div>
+          <div class="filter-field"><label>Hasta</label><input type="date" id="f-hasta"></div>
         </div>
         <div class="filter-row">
           <div class="filter-field">
@@ -274,270 +231,293 @@
           </button>
         </div>
       </div>
- 
+
       <div class="stats-row" id="stats-row"></div>
       <div id="admin-records"></div>
     </div>
   </div>
 </div>
- 
+
 <div class="toast" id="toast"></div>
- 
+
 <script>
-  const ADMIN_PIN = '2025';
-  let selectedMotivo = '';
-  let locationData = null;
-  let allRecords = [];
- 
-  /* ---- Storage ---- */
-  function storageKey() { return 'visitas_v1'; }
- 
-  function loadRecords() {
-    try {
-      const raw = localStorage.getItem(storageKey());
-      allRecords = raw ? JSON.parse(raw) : [];
-    } catch(e) { allRecords = []; }
+// ============================================================
+//  PEGA AQUÍ TU URL DE GOOGLE APPS SCRIPT
+// ============================================================
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzZqZ8_jdqjVNjwM7eJ7gjmlLyM4-YnDhTr5rhAk5U-212C9pELdwoPetLwdz3G6oNInQ/exec';
+// ============================================================
+
+const ADMIN_PIN = '2025';
+let selectedMotivo = '';
+let locationData   = null;
+let allRecords     = [];
+
+/* ---- API calls ---- */
+async function apiGet(params) {
+  const url = SCRIPT_URL + '?' + new URLSearchParams(params);
+  const res  = await fetch(url);
+  return res.json();
+}
+
+async function apiPost(body) {
+  const res = await fetch(SCRIPT_URL, {
+    method: 'POST',
+    body:   JSON.stringify(body)
+  });
+  return res.json();
+}
+
+/* ---- Tabs ---- */
+function showTab(tab) {
+  document.getElementById('content-asesor').style.display = tab === 'asesor' ? 'block' : 'none';
+  document.getElementById('content-admin').style.display  = tab === 'admin'  ? 'block' : 'none';
+  document.getElementById('tab-asesor').className = 'tab' + (tab === 'asesor' ? ' active' : '');
+  document.getElementById('tab-admin').className  = 'tab' + (tab === 'admin'  ? ' active' : '');
+}
+
+/* ---- PIN ---- */
+function checkPin() {
+  const val = document.getElementById('pin-input').value.trim();
+  if (val === ADMIN_PIN) {
+    document.getElementById('lock-wrap').style.display   = 'none';
+    document.getElementById('admin-panel').style.display = 'block';
+    document.getElementById('pin-error').style.display   = 'none';
+    document.getElementById('pin-input').value = '';
+    renderAdmin();
+  } else {
+    const inp = document.getElementById('pin-input');
+    inp.classList.add('pin-err');
+    document.getElementById('pin-error').style.display = 'block';
+    setTimeout(() => { inp.classList.remove('pin-err'); inp.value = ''; }, 1200);
   }
- 
-  function saveRecords() {
-    localStorage.setItem(storageKey(), JSON.stringify(allRecords));
+}
+
+function lockAdmin() {
+  document.getElementById('lock-wrap').style.display   = 'block';
+  document.getElementById('admin-panel').style.display = 'none';
+}
+
+/* ---- Motivo ---- */
+function selectMotivo(m) {
+  selectedMotivo = m;
+  document.getElementById('btn-cobro').className = 'motivo-btn' + (m === 'cobro' ? ' sel-cobro' : '');
+  document.getElementById('btn-venta').className = 'motivo-btn' + (m === 'venta' ? ' sel-venta' : '');
+  checkReady();
+}
+
+/* ---- GPS ---- */
+function getLocation() {
+  const btn  = document.getElementById('loc-btn');
+  const txt  = document.getElementById('loc-text');
+  const icon = document.getElementById('loc-icon');
+  txt.textContent = 'Obteniendo ubicación...';
+  icon.className  = 'ti ti-loader-2';
+  btn.disabled    = true;
+
+  if (!navigator.geolocation) {
+    txt.textContent = 'GPS no disponible en este dispositivo';
+    btn.className = 'loc-btn err'; btn.disabled = false; return;
   }
- 
-  /* ---- Tabs ---- */
-  function showTab(tab) {
-    document.getElementById('content-asesor').style.display = tab === 'asesor' ? 'block' : 'none';
-    document.getElementById('content-admin').style.display  = tab === 'admin'  ? 'block' : 'none';
-    document.getElementById('tab-asesor').className = 'tab' + (tab === 'asesor' ? ' active' : '');
-    document.getElementById('tab-admin').className  = 'tab' + (tab === 'admin'  ? ' active' : '');
-  }
- 
-  /* ---- PIN / Lock ---- */
-  function checkPin() {
-    const val = document.getElementById('pin-input').value.trim();
-    if (val === ADMIN_PIN) {
-      document.getElementById('lock-wrap').style.display  = 'none';
-      document.getElementById('admin-panel').style.display = 'block';
-      document.getElementById('pin-error').style.display  = 'none';
-      document.getElementById('pin-input').value = '';
-      renderAdmin();
-    } else {
-      const inp = document.getElementById('pin-input');
-      inp.classList.add('pin-err');
-      document.getElementById('pin-error').style.display = 'block';
-      setTimeout(() => {
-        inp.classList.remove('pin-err');
-        inp.value = '';
-      }, 1200);
-    }
-  }
- 
-  function lockAdmin() {
-    document.getElementById('lock-wrap').style.display   = 'block';
-    document.getElementById('admin-panel').style.display = 'none';
-  }
- 
-  /* ---- Motivo ---- */
-  function selectMotivo(m) {
-    selectedMotivo = m;
-    document.getElementById('btn-cobro').className = 'motivo-btn' + (m === 'cobro' ? ' sel-cobro' : '');
-    document.getElementById('btn-venta').className = 'motivo-btn' + (m === 'venta' ? ' sel-venta' : '');
-    checkReady();
-  }
- 
-  /* ---- GPS ---- */
-  function getLocation() {
-    const btn  = document.getElementById('loc-btn');
-    const txt  = document.getElementById('loc-text');
-    const icon = document.getElementById('loc-icon');
-    txt.textContent = 'Obteniendo ubicación...';
-    icon.className  = 'ti ti-loader-2';
-    btn.disabled    = true;
- 
-    if (!navigator.geolocation) {
-      txt.textContent = 'GPS no disponible en este dispositivo';
-      btn.className   = 'loc-btn err';
+
+  navigator.geolocation.getCurrentPosition(
+    pos => {
+      const lat = pos.coords.latitude.toFixed(6);
+      const lng = pos.coords.longitude.toFixed(6);
+      const acc = Math.round(pos.coords.accuracy);
+      locationData = { lat, lng, acc };
+      txt.textContent = lat + ', ' + lng + ' (±' + acc + 'm)';
+      btn.className   = 'loc-btn got';
+      icon.className  = 'ti ti-circle-check';
       btn.disabled    = false;
-      return;
-    }
- 
-    navigator.geolocation.getCurrentPosition(
-      pos => {
-        const lat = pos.coords.latitude.toFixed(6);
-        const lng = pos.coords.longitude.toFixed(6);
-        const acc = Math.round(pos.coords.accuracy);
-        locationData = { lat, lng, acc };
-        txt.textContent     = lat + ', ' + lng + ' (±' + acc + 'm)';
-        btn.className       = 'loc-btn got';
-        icon.className      = 'ti ti-circle-check';
-        btn.disabled        = false;
-        document.getElementById('map-container').style.display = 'block';
-        document.getElementById('map-frame').src =
-          'https://maps.google.com/maps?q=' + lat + ',' + lng + '&z=16&output=embed';
-        checkReady();
-      },
-      () => {
-        txt.textContent = 'No se pudo obtener ubicación. Verifica permisos GPS.';
-        btn.className   = 'loc-btn err';
-        icon.className  = 'ti ti-map-pin-off';
-        btn.disabled    = false;
-      },
-      { enableHighAccuracy: true, timeout: 15000 }
-    );
-  }
- 
-  /* ---- Form validation ---- */
-  function checkReady() {
-    const ok = document.getElementById('asesor').value &&
-               document.getElementById('cliente').value.trim() &&
-               document.getElementById('km').value &&
-               selectedMotivo &&
-               locationData;
-    document.getElementById('submit-btn').disabled = !ok;
-  }
- 
-  /* ---- Submit ---- */
-  function submitForm() {
-    const asesor  = document.getElementById('asesor').value;
-    const cliente = document.getElementById('cliente').value.trim();
-    const km      = document.getElementById('km').value;
-    if (!asesor || !cliente || !km || !selectedMotivo || !locationData) return;
- 
-    const now = new Date();
-    const record = {
-      id:      Date.now(),
-      asesor,
-      cliente,
-      km:      parseInt(km),
-      motivo:  selectedMotivo,
-      lat:     locationData.lat,
-      lng:     locationData.lng,
-      acc:     locationData.acc,
-      fecha:   now.toISOString().split('T')[0],
-      hora:    now.toTimeString().slice(0, 5),
-      ts:      now.toISOString()
-    };
- 
-    allRecords.unshift(record);
-    saveRecords();
+      document.getElementById('map-container').style.display = 'block';
+      document.getElementById('map-frame').src =
+        'https://maps.google.com/maps?q=' + lat + ',' + lng + '&z=16&output=embed';
+      checkReady();
+    },
+    () => {
+      txt.textContent = 'No se pudo obtener ubicación. Verifica permisos GPS.';
+      btn.className   = 'loc-btn err';
+      icon.className  = 'ti ti-map-pin-off';
+      btn.disabled    = false;
+    },
+    { enableHighAccuracy: true, timeout: 15000 }
+  );
+}
+
+/* ---- Form ---- */
+function checkReady() {
+  const ok = document.getElementById('asesor').value &&
+             document.getElementById('cliente').value.trim() &&
+             document.getElementById('km').value &&
+             selectedMotivo && locationData;
+  document.getElementById('submit-btn').disabled = !ok;
+}
+
+async function submitForm() {
+  const asesor  = document.getElementById('asesor').value;
+  const cliente = document.getElementById('cliente').value.trim();
+  const km      = document.getElementById('km').value;
+  if (!asesor || !cliente || !km || !selectedMotivo || !locationData) return;
+
+  const btn = document.getElementById('submit-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="ti ti-loader-2" style="font-size:18px"></i> Guardando...';
+
+  const now = new Date();
+  const record = {
+    action:  'insert',
+    id:      Date.now(),
+    asesor, cliente,
+    km:      parseInt(km),
+    motivo:  selectedMotivo,
+    lat:     locationData.lat,
+    lng:     locationData.lng,
+    acc:     locationData.acc,
+    fecha:   now.toISOString().split('T')[0],
+    hora:    now.toTimeString().slice(0, 5)
+  };
+
+  try {
+    await apiPost(record);
     showToast('✓ Visita registrada correctamente', false);
     resetForm();
+  } catch(e) {
+    showToast('Error al guardar. Verifica conexión.', true);
+    btn.disabled = false;
+    btn.innerHTML = '<i class="ti ti-circle-check" style="font-size:18px"></i> Registrar visita';
   }
- 
-  function resetForm() {
-    document.getElementById('asesor').value  = '';
-    document.getElementById('cliente').value = '';
-    document.getElementById('km').value      = '';
-    selectedMotivo = '';
-    locationData   = null;
-    document.getElementById('btn-cobro').className  = 'motivo-btn';
-    document.getElementById('btn-venta').className  = 'motivo-btn';
-    document.getElementById('loc-btn').className    = 'loc-btn';
-    document.getElementById('loc-icon').className   = 'ti ti-current-location';
-    document.getElementById('loc-text').textContent = 'Toca para obtener tu ubicación actual';
-    document.getElementById('map-container').style.display = 'none';
-    document.getElementById('submit-btn').disabled  = true;
+}
+
+function resetForm() {
+  document.getElementById('asesor').value  = '';
+  document.getElementById('cliente').value = '';
+  document.getElementById('km').value      = '';
+  selectedMotivo = ''; locationData = null;
+  document.getElementById('btn-cobro').className  = 'motivo-btn';
+  document.getElementById('btn-venta').className  = 'motivo-btn';
+  document.getElementById('loc-btn').className    = 'loc-btn';
+  document.getElementById('loc-icon').className   = 'ti ti-current-location';
+  document.getElementById('loc-text').textContent = 'Toca para obtener tu ubicación actual';
+  document.getElementById('map-container').style.display = 'none';
+  document.getElementById('submit-btn').disabled  = false;
+  document.getElementById('submit-btn').innerHTML =
+    '<i class="ti ti-circle-check" style="font-size:18px"></i> Registrar visita';
+  checkReady();
+}
+
+/* ---- Admin ---- */
+function getFiltered() {
+  const desde  = document.getElementById('f-desde').value;
+  const hasta  = document.getElementById('f-hasta').value;
+  const asesor = document.getElementById('f-asesor').value;
+  const motivo = document.getElementById('f-motivo').value;
+  return allRecords.filter(r => {
+    if (desde  && r.Fecha   < desde)    return false;
+    if (hasta  && r.Fecha   > hasta)    return false;
+    if (asesor && r.Asesor !== asesor)  return false;
+    if (motivo && r.Motivo.toLowerCase() !== motivo) return false;
+    return true;
+  });
+}
+
+async function renderAdmin() {
+  document.getElementById('admin-records').innerHTML =
+    '<div class="loading"><i class="ti ti-loader-2"></i> Cargando registros...</div>';
+  document.getElementById('stats-row').innerHTML = '';
+
+  try {
+    const data = await apiGet({ action: 'getAll' });
+    allRecords = data.records || [];
+  } catch(e) {
+    document.getElementById('admin-records').innerHTML =
+      '<div class="empty"><i class="ti ti-wifi-off"></i><p>Error al cargar. Verifica conexión.</p></div>';
+    return;
   }
- 
-  /* ---- Admin: filter & render ---- */
-  function getFiltered() {
-    const desde  = document.getElementById('f-desde').value;
-    const hasta  = document.getElementById('f-hasta').value;
-    const asesor = document.getElementById('f-asesor').value;
-    const motivo = document.getElementById('f-motivo').value;
-    return allRecords.filter(r => {
-      if (desde  && r.fecha < desde)   return false;
-      if (hasta  && r.fecha > hasta)   return false;
-      if (asesor && r.asesor !== asesor) return false;
-      if (motivo && r.motivo !== motivo) return false;
-      return true;
-    });
+
+  const fr     = getFiltered();
+  const cobros = fr.filter(r => r.Motivo && r.Motivo.toLowerCase() === 'cobro').length;
+  const ventas = fr.filter(r => r.Motivo && r.Motivo.toLowerCase() === 'venta').length;
+
+  document.getElementById('stats-row').innerHTML =
+    '<div class="stat"><div class="val">' + fr.length + '</div><div class="lbl">Total registros</div></div>' +
+    '<div class="stat"><div class="val">' + cobros + ' / ' + ventas + '</div><div class="lbl">Cobros / Ventas</div></div>';
+
+  const c = document.getElementById('admin-records');
+  if (!fr.length) {
+    c.innerHTML = '<div class="empty"><i class="ti ti-clipboard-x"></i><p>No hay registros</p></div>';
+    return;
   }
- 
-  function renderAdmin() {
-    const fr     = getFiltered();
-    const cobros = fr.filter(r => r.motivo === 'cobro').length;
-    const ventas = fr.filter(r => r.motivo === 'venta').length;
- 
-    document.getElementById('stats-row').innerHTML =
-      '<div class="stat"><div class="val">' + fr.length + '</div><div class="lbl">Total registros</div></div>' +
-      '<div class="stat"><div class="val">' + cobros + ' / ' + ventas + '</div><div class="lbl">Cobros / Ventas</div></div>';
- 
-    const c = document.getElementById('admin-records');
-    if (!fr.length) {
-      c.innerHTML = '<div class="empty"><i class="ti ti-clipboard-x"></i><p>No hay registros</p></div>';
-      return;
-    }
- 
-    c.innerHTML = fr.map(r => {
-      const ini = r.asesor.split(' ').map(w => w[0]).join('').slice(0, 2);
-      return '<div class="record-card">' +
-        '<div class="record-avatar">' + ini + '</div>' +
-        '<div class="record-body">' +
-          '<div class="record-name">' + r.asesor + '</div>' +
-          '<div class="record-meta">' +
-            '<span class="badge badge-' + r.motivo + '">' + r.motivo.toUpperCase() + '</span>' +
-            '<span class="badge badge-km"><i class="ti ti-car" style="font-size:11px"></i> ' + r.km.toLocaleString() + ' km</span>' +
-            '<span class="badge-date">' + r.fecha + ' ' + r.hora + '</span>' +
-          '</div>' +
-          (r.cliente ? '<div class="record-cliente"><i class="ti ti-building-store" style="font-size:11px"></i> ' + r.cliente + '</div>' : '') +
-          '<div class="record-loc"><i class="ti ti-map-pin" style="font-size:11px"></i> ' + r.lat + ', ' + r.lng + '</div>' +
+
+  c.innerHTML = fr.map(r => {
+    const nombre = r.Asesor || '';
+    const ini    = nombre.split(' ').map(w => w[0]).join('').slice(0, 2);
+    const motivo = (r.Motivo || '').toLowerCase();
+    return '<div class="record-card">' +
+      '<div class="record-avatar">' + ini + '</div>' +
+      '<div class="record-body">' +
+        '<div class="record-name">' + nombre + '</div>' +
+        '<div class="record-meta">' +
+          '<span class="badge badge-' + motivo + '">' + (r.Motivo || '').toUpperCase() + '</span>' +
+          '<span class="badge badge-km"><i class="ti ti-car" style="font-size:11px"></i> ' + Number(r.Kilometraje || 0).toLocaleString() + ' km</span>' +
+          '<span class="badge-date">' + (r.Fecha || '') + ' ' + (r.Hora || '') + '</span>' +
         '</div>' +
-        '<div class="record-actions">' +
-          '<button class="icon-btn map" onclick="openMap(\'' + r.lat + '\',\'' + r.lng + '\')" title="Ver en Maps"><i class="ti ti-map-2"></i></button>' +
-          '<button class="icon-btn del" onclick="deleteRecord(' + r.id + ')" title="Eliminar"><i class="ti ti-trash"></i></button>' +
-        '</div>' +
-      '</div>';
-    }).join('');
-  }
- 
-  function openMap(lat, lng) {
-    window.open('https://maps.google.com/maps?q=' + lat + ',' + lng, '_blank');
-  }
- 
-  function deleteRecord(id) {
-    if (!confirm('¿Eliminar este registro?')) return;
-    allRecords = allRecords.filter(r => r.id !== id);
-    saveRecords();
-    renderAdmin();
+        (r.Cliente ? '<div class="record-cliente"><i class="ti ti-building-store" style="font-size:11px"></i> ' + r.Cliente + '</div>' : '') +
+        '<div class="record-loc"><i class="ti ti-map-pin" style="font-size:11px"></i> ' + (r.Latitud || '') + ', ' + (r.Longitud || '') + '</div>' +
+      '</div>' +
+      '<div class="record-actions">' +
+        '<button class="icon-btn map" onclick="openMap(\'' + r.Latitud + '\',\'' + r.Longitud + '\')" title="Ver en Maps"><i class="ti ti-map-2"></i></button>' +
+        '<button class="icon-btn del" onclick="deleteRecord(\'' + r.ID + '\')" title="Eliminar"><i class="ti ti-trash"></i></button>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function openMap(lat, lng) {
+  window.open('https://maps.google.com/maps?q=' + lat + ',' + lng, '_blank');
+}
+
+async function deleteRecord(id) {
+  if (!confirm('¿Eliminar este registro?')) return;
+  try {
+    await apiGet({ action: 'delete', id });
     showToast('Registro eliminado', false);
+    renderAdmin();
+  } catch(e) {
+    showToast('Error al eliminar', true);
   }
- 
-  /* ---- Export Excel ---- */
-  function exportExcel() {
-    const fr = getFiltered();
-    if (!fr.length) { showToast('No hay registros para exportar', true); return; }
-    const desde = document.getElementById('f-desde').value || 'inicio';
-    const hasta  = document.getElementById('f-hasta').value  || 'hoy';
-    const data = fr.map(r => ({
-      'Asesor':          r.asesor,
-      'Cliente':         r.cliente || '',
-      'Fecha':           r.fecha,
-      'Hora':            r.hora,
-      'Motivo':          r.motivo.charAt(0).toUpperCase() + r.motivo.slice(1),
-      'Kilometraje':     r.km,
-      'Latitud':         r.lat,
-      'Longitud':        r.lng,
-      'Precisión GPS(m)': r.acc,
-      'Google Maps':     'https://maps.google.com/?q=' + r.lat + ',' + r.lng
-    }));
-    const ws = XLSX.utils.json_to_sheet(data);
-    ws['!cols'] = [{wch:22},{wch:22},{wch:12},{wch:8},{wch:10},{wch:14},{wch:14},{wch:14},{wch:18},{wch:40}];
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Visitas');
-    XLSX.writeFile(wb, 'Visitas_' + desde + '_a_' + hasta + '.xlsx');
-    showToast('Excel descargado', false);
-  }
- 
-  /* ---- Toast ---- */
-  function showToast(msg, isErr) {
-    const t = document.getElementById('toast');
-    t.textContent = msg;
-    t.className = 'toast' + (isErr ? ' err' : '') + ' show';
-    setTimeout(() => { t.className = 'toast' + (isErr ? ' err' : ''); }, 2800);
-  }
- 
-  /* ---- Init ---- */
-  loadRecords();
+}
+
+function exportExcel() {
+  const fr = getFiltered();
+  if (!fr.length) { showToast('No hay registros para exportar', true); return; }
+  const desde = document.getElementById('f-desde').value || 'inicio';
+  const hasta  = document.getElementById('f-hasta').value  || 'hoy';
+  const data = fr.map(r => ({
+    'Asesor':           r.Asesor        || '',
+    'Cliente':          r.Cliente       || '',
+    'Fecha':            r.Fecha         || '',
+    'Hora':             r.Hora          || '',
+    'Motivo':           r.Motivo        || '',
+    'Kilometraje':      r.Kilometraje   || '',
+    'Latitud':          r.Latitud       || '',
+    'Longitud':         r.Longitud      || '',
+    'Precisión GPS(m)': r.Precision_GPS || '',
+    'Google Maps': 'https://maps.google.com/?q=' + r.Latitud + ',' + r.Longitud
+  }));
+  const ws = XLSX.utils.json_to_sheet(data);
+  ws['!cols'] = [{wch:22},{wch:22},{wch:12},{wch:8},{wch:10},{wch:14},{wch:14},{wch:14},{wch:18},{wch:40}];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Visitas');
+  XLSX.writeFile(wb, 'Visitas_' + desde + '_a_' + hasta + '.xlsx');
+  showToast('Excel descargado', false);
+}
+
+function showToast(msg, isErr) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast' + (isErr ? ' err' : '') + ' show';
+  setTimeout(() => { t.className = 'toast' + (isErr ? ' err' : ''); }, 2800);
+}
 </script>
 </body>
 </html>
