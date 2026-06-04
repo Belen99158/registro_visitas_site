@@ -28,6 +28,9 @@ body { font-family: system-ui, sans-serif; background: #f5f5f2; color: #1a1a18; 
 .motivo-btn { padding: 10px 8px; border: 0.5px solid rgba(0,0,0,.2); border-radius: 8px; background: #fff; color: #555; font-size: 13px; font-weight: 500; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all .15s; }
 .motivo-btn.sel-cobro { background: #E1F5EE; border-color: #0F6E56; color: #085041; }
 .motivo-btn.sel-venta { background: #E6F1FB; border-color: #185FA5; color: #0C447C; }
+.motivo-btn.sel-devolucion { background: #FDF4E7; border-color: #B06D0A; color: #7A4C06; }
+.motivo-btn.sel-garantia { background: #F4EAF9; border-color: #8B3DB8; color: #5E2880; }
+.motivo-btn.sel-visita { background: #FEF0F0; border-color: #C0392B; color: #922B21; }
 .loc-btn { width: 100%; padding: 10px 12px; border: 0.5px solid rgba(0,0,0,.2); border-radius: 8px; background: #fff; color: #555; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 8px; }
 .loc-btn.got { border-color: #0F6E56; color: #085041; background: #E1F5EE; }
 .loc-btn.err { border-color: #993C1D; color: #712B13; background: #FAECE7; }
@@ -71,6 +74,9 @@ body { font-family: system-ui, sans-serif; background: #f5f5f2; color: #1a1a18; 
 .badge { padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 500; }
 .badge-cobro { background: #E1F5EE; color: #085041; }
 .badge-venta { background: #E6F1FB; color: #0C447C; }
+.badge-devolucion { background: #FDF4E7; color: #7A4C06; }
+.badge-devolucion_garantia { background: #F4EAF9; color: #5E2880; }
+.badge-visita_comercial { background: #FEF0F0; color: #922B21; }
 .badge-km { background: #F1EFE8; color: #444441; }
 .badge-date { font-size: 11px; color: #666; }
 .record-cliente { font-size: 12px; color: #444; margin-top: 2px; }
@@ -142,6 +148,15 @@ body { font-family: system-ui, sans-serif; background: #f5f5f2; color: #1a1a18; 
           </button>
           <button class="motivo-btn" id="btn-venta" onclick="selectMotivo('venta')">
             <i class="ti ti-tag" style="font-size:16px"></i> Venta
+          </button>
+          <button class="motivo-btn" id="btn-devolucion" onclick="selectMotivo('devolucion')">
+            <i class="ti ti-arrow-back-up" style="font-size:16px"></i> Devolución
+          </button>
+          <button class="motivo-btn" id="btn-garantia" onclick="selectMotivo('devolucion_garantia')">
+            <i class="ti ti-shield-check" style="font-size:16px"></i> Dev / Garantía
+          </button>
+          <button class="motivo-btn" id="btn-visita" onclick="selectMotivo('visita_comercial')" style="grid-column: span 2;">
+            <i class="ti ti-briefcase" style="font-size:16px"></i> Visita Comercial
           </button>
         </div>
       </div>
@@ -218,6 +233,9 @@ body { font-family: system-ui, sans-serif; background: #f5f5f2; color: #1a1a18; 
               <option value="">Todos</option>
               <option value="cobro">Cobro</option>
               <option value="venta">Venta</option>
+              <option value="devolucion">Devolución</option>
+              <option value="devolucion_garantia">Dev / Garantía</option>
+              <option value="visita_comercial">Visita Comercial</option>
             </select>
           </div>
         </div>
@@ -290,8 +308,20 @@ function lockAdmin() {
 /* ---- Motivo ---- */
 function selectMotivo(m) {
   selectedMotivo = m;
-  document.getElementById('btn-cobro').className = 'motivo-btn' + (m === 'cobro' ? ' sel-cobro' : '');
-  document.getElementById('btn-venta').className = 'motivo-btn' + (m === 'venta' ? ' sel-venta' : '');
+  const map = {
+    cobro:              'sel-cobro',
+    venta:              'sel-venta',
+    devolucion:         'sel-devolucion',
+    devolucion_garantia:'sel-garantia',
+    visita_comercial:   'sel-visita'
+  };
+  document.getElementById('btn-cobro').className    = 'motivo-btn' + (m === 'cobro'               ? ' sel-cobro'    : '');
+  document.getElementById('btn-venta').className    = 'motivo-btn' + (m === 'venta'               ? ' sel-venta'    : '');
+  document.getElementById('btn-devolucion').className = 'motivo-btn' + (m === 'devolucion'         ? ' sel-devolucion' : '');
+  document.getElementById('btn-garantia').className = 'motivo-btn' + (m === 'devolucion_garantia' ? ' sel-garantia' : '');
+  document.getElementById('btn-visita').className   = 'motivo-btn' + (m === 'visita_comercial'    ? ' sel-visita'   : '') + ' ' + (m === 'visita_comercial' ? '' : '');
+  // preserve grid-column span on visita button
+  document.getElementById('btn-visita').style.gridColumn = 'span 2';
   checkReady();
 }
 
@@ -389,8 +419,12 @@ function resetForm() {
   document.getElementById('cliente').value = '';
   document.getElementById('km').value      = '';
   selectedMotivo = ''; locationData = null;
-  document.getElementById('btn-cobro').className  = 'motivo-btn';
-  document.getElementById('btn-venta').className  = 'motivo-btn';
+  document.getElementById('btn-cobro').className      = 'motivo-btn';
+  document.getElementById('btn-venta').className      = 'motivo-btn';
+  document.getElementById('btn-devolucion').className = 'motivo-btn';
+  document.getElementById('btn-garantia').className   = 'motivo-btn';
+  document.getElementById('btn-visita').className     = 'motivo-btn';
+  document.getElementById('btn-visita').style.gridColumn = 'span 2';
   document.getElementById('loc-btn').className    = 'loc-btn';
   document.getElementById('loc-icon').className   = 'ti ti-current-location';
   document.getElementById('loc-text').textContent = 'Toca para obtener tu ubicación actual';
@@ -452,7 +486,7 @@ async function renderAdmin() {
       '<div class="record-body">' +
         '<div class="record-name">' + nombre + '</div>' +
         '<div class="record-meta">' +
-          '<span class="badge badge-' + motivo + '">' + (r.Motivo || '').toUpperCase() + '</span>' +
+          '<span class="badge badge-' + motivo + '">' + (r.Motivo || '').toUpperCase().replace('_', ' ') + '</span>' +
           '<span class="badge badge-km"><i class="ti ti-car" style="font-size:11px"></i> ' +
             Number(r.Kilometraje || 0).toLocaleString() + ' km</span>' +
           '<span class="badge-date">' + (r.Fecha || '') + ' ' + (r.Hora || '') + '</span>' +
