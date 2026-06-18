@@ -22,6 +22,7 @@ body { font-family: system-ui, sans-serif; background: #f5f5f2; color: #1a1a18; 
 .field { margin-bottom: 1rem; }
 .field:last-child { margin-bottom: 0; }
 .field label { display: block; font-size: 12px; color: #555; margin-bottom: 5px; font-weight: 500; }
+.field-hint { font-size: 11px; color: #888; font-weight: 400; margin-left: 4px; }
 .field select, .field input { width: 100%; padding: 9px 12px; border: 0.5px solid rgba(0,0,0,.25); border-radius: 8px; font-size: 14px; background: #fff; color: #1a1a18; }
 .field select:focus, .field input:focus { outline: none; box-shadow: 0 0 0 2px #185FA5; border-color: #185FA5; }
 .motivo-group { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
@@ -141,7 +142,7 @@ body { font-family: system-ui, sans-serif; background: #f5f5f2; color: #1a1a18; 
         <input type="number" id="km" placeholder="Ej: 45230" min="0" oninput="checkReady()">
       </div>
       <div class="field">
-        <label>Motivo de visita</label>
+        <label>Motivo de visita <span class="field-hint">(puedes elegir varios)</span></label>
         <div class="motivo-group">
           <button class="motivo-btn" id="btn-cobro" onclick="selectMotivo('cobro')">
             <i class="ti ti-cash" style="font-size:16px"></i> Cobro
@@ -265,9 +266,9 @@ const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyfU4JbCUT6eqThx_0h2
 // ============================================================
 
 const ADMIN_PIN = '2025';
-let selectedMotivo = '';
-let locationData   = null;
-let allRecords     = [];
+let selectedMotivos = [];   // ahora es una lista: se pueden elegir varios
+let locationData    = null;
+let allRecords      = [];
 
 /* ---- llamada GET a Apps Script (no tiene problemas de CORS) ---- */
 function api(params) {
@@ -305,24 +306,29 @@ function lockAdmin() {
   document.getElementById('admin-panel').style.display = 'none';
 }
 
-/* ---- Motivo ---- */
+/* ---- Motivo (selección múltiple: alterna cada botón) ---- */
 function selectMotivo(m) {
-  selectedMotivo = m;
-  const map = {
-    cobro:              'sel-cobro',
-    venta:              'sel-venta',
-    devolucion:         'sel-devolucion',
-    devolucion_garantia:'sel-garantia',
-    visita_comercial:   'sel-visita'
-  };
-  document.getElementById('btn-cobro').className    = 'motivo-btn' + (m === 'cobro'               ? ' sel-cobro'    : '');
-  document.getElementById('btn-venta').className    = 'motivo-btn' + (m === 'venta'               ? ' sel-venta'    : '');
-  document.getElementById('btn-devolucion').className = 'motivo-btn' + (m === 'devolucion'         ? ' sel-devolucion' : '');
-  document.getElementById('btn-garantia').className = 'motivo-btn' + (m === 'devolucion_garantia' ? ' sel-garantia' : '');
-  document.getElementById('btn-visita').className   = 'motivo-btn' + (m === 'visita_comercial'    ? ' sel-visita'   : '') + ' ' + (m === 'visita_comercial' ? '' : '');
-  // preserve grid-column span on visita button
-  document.getElementById('btn-visita').style.gridColumn = 'span 2';
+  const i = selectedMotivos.indexOf(m);
+  if (i === -1) selectedMotivos.push(m);   // agregar
+  else          selectedMotivos.splice(i, 1); // quitar
+  updateMotivoButtons();
   checkReady();
+}
+
+function updateMotivoButtons() {
+  const sel = {
+    cobro:               { id: 'btn-cobro',      cls: 'sel-cobro'      },
+    venta:               { id: 'btn-venta',      cls: 'sel-venta'      },
+    devolucion:          { id: 'btn-devolucion', cls: 'sel-devolucion' },
+    devolucion_garantia: { id: 'btn-garantia',   cls: 'sel-garantia'   },
+    visita_comercial:    { id: 'btn-visita',     cls: 'sel-visita'     }
+  };
+  Object.keys(sel).forEach(m => {
+    const btn = document.getElementById(sel[m].id);
+    btn.className = 'motivo-btn' + (selectedMotivos.includes(m) ? ' ' + sel[m].cls : '');
+  });
+  // mantener el ancho completo del botón de visita comercial
+  document.getElementById('btn-visita').style.gridColumn = 'span 2';
 }
 
 /* ---- GPS ---- */
@@ -369,7 +375,7 @@ function checkReady() {
   const ok = document.getElementById('asesor').value &&
              document.getElementById('cliente').value.trim() &&
              document.getElementById('km').value &&
-             selectedMotivo && locationData;
+             selectedMotivos.length > 0 && locationData;
   document.getElementById('submit-btn').disabled = !ok;
 }
 
@@ -378,7 +384,7 @@ async function submitForm() {
   const asesor  = document.getElementById('asesor').value;
   const cliente = document.getElementById('cliente').value.trim();
   const km      = document.getElementById('km').value;
-  if (!asesor || !cliente || !km || !selectedMotivo || !locationData) return;
+  if (!asesor || !cliente || !km || !selectedMotivos.length || !locationData) return;
 
   const btn = document.getElementById('submit-btn');
   btn.disabled = true;
@@ -393,7 +399,7 @@ async function submitForm() {
       asesor,
       cliente,
       km:      parseInt(km),
-      motivo:  selectedMotivo,
+      motivo:  selectedMotivos.join(', '),   // varios motivos separados por coma
       lat:     locationData.lat,
       lng:     locationData.lng,
       acc:     locationData.acc,
@@ -418,13 +424,8 @@ function resetForm() {
   document.getElementById('asesor').value  = '';
   document.getElementById('cliente').value = '';
   document.getElementById('km').value      = '';
-  selectedMotivo = ''; locationData = null;
-  document.getElementById('btn-cobro').className      = 'motivo-btn';
-  document.getElementById('btn-venta').className      = 'motivo-btn';
-  document.getElementById('btn-devolucion').className = 'motivo-btn';
-  document.getElementById('btn-garantia').className   = 'motivo-btn';
-  document.getElementById('btn-visita').className     = 'motivo-btn';
-  document.getElementById('btn-visita').style.gridColumn = 'span 2';
+  selectedMotivos = []; locationData = null;
+  updateMotivoButtons();
   document.getElementById('loc-btn').className    = 'loc-btn';
   document.getElementById('loc-icon').className   = 'ti ti-current-location';
   document.getElementById('loc-text').textContent = 'Toca para obtener tu ubicación actual';
@@ -432,6 +433,11 @@ function resetForm() {
   document.getElementById('submit-btn').disabled  = true;
   document.getElementById('submit-btn').innerHTML =
     '<i class="ti ti-circle-check" style="font-size:18px"></i> Registrar visita';
+}
+
+/* ---- helper: lista de motivos de un registro ---- */
+function motivosDe(r) {
+  return (r.Motivo || '').toLowerCase().split(',').map(s => s.trim()).filter(Boolean);
 }
 
 /* ---- Admin: filtrar y renderizar ---- */
@@ -444,7 +450,7 @@ function getFiltered() {
     if (desde  && r.Fecha < desde)   return false;
     if (hasta  && r.Fecha > hasta)   return false;
     if (asesor && r.Asesor !== asesor) return false;
-    if (motivo && (r.Motivo || '').toLowerCase() !== motivo) return false;
+    if (motivo && !motivosDe(r).includes(motivo)) return false; // coincide si contiene el motivo
     return true;
   });
 }
@@ -464,8 +470,8 @@ async function renderAdmin() {
   }
 
   const fr     = getFiltered();
-  const cobros = fr.filter(r => (r.Motivo || '').toLowerCase() === 'cobro').length;
-  const ventas = fr.filter(r => (r.Motivo || '').toLowerCase() === 'venta').length;
+  const cobros = fr.filter(r => motivosDe(r).includes('cobro')).length;
+  const ventas = fr.filter(r => motivosDe(r).includes('venta')).length;
 
   document.getElementById('stats-row').innerHTML =
     '<div class="stat"><div class="val">' + fr.length + '</div><div class="lbl">Total registros</div></div>' +
@@ -480,13 +486,16 @@ async function renderAdmin() {
   c.innerHTML = fr.map(r => {
     const nombre = r.Asesor || '';
     const ini    = nombre.split(' ').map(w => w[0]).join('').slice(0, 2);
-    const motivo = (r.Motivo || '').toLowerCase();
+    const motivos = motivosDe(r);
+    const badges = motivos.length
+      ? motivos.map(mo => '<span class="badge badge-' + mo + '">' + mo.toUpperCase().replace(/_/g, ' ') + '</span>').join('')
+      : '';
     return '<div class="record-card">' +
       '<div class="record-avatar">' + ini + '</div>' +
       '<div class="record-body">' +
         '<div class="record-name">' + nombre + '</div>' +
         '<div class="record-meta">' +
-          '<span class="badge badge-' + motivo + '">' + (r.Motivo || '').toUpperCase().replace('_', ' ') + '</span>' +
+          badges +
           '<span class="badge badge-km"><i class="ti ti-car" style="font-size:11px"></i> ' +
             Number(r.Kilometraje || 0).toLocaleString() + ' km</span>' +
           '<span class="badge-date">' + (r.Fecha || '') + ' ' + (r.Hora || '') + '</span>' +
@@ -539,7 +548,7 @@ function exportExcel() {
     'Google Maps': 'https://maps.google.com/?q=' + r.Latitud + ',' + r.Longitud
   }));
   const ws = XLSX.utils.json_to_sheet(data);
-  ws['!cols'] = [{wch:22},{wch:22},{wch:12},{wch:8},{wch:10},{wch:14},{wch:14},{wch:14},{wch:18},{wch:40}];
+  ws['!cols'] = [{wch:22},{wch:22},{wch:12},{wch:8},{wch:24},{wch:14},{wch:14},{wch:14},{wch:18},{wch:40}];
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Visitas');
   XLSX.writeFile(wb, 'Visitas_' + desde + '_a_' + hasta + '.xlsx');
