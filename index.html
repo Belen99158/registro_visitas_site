@@ -5,128 +5,113 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Registro de Visitas</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.7.0/dist/tabler-icons.min.css">
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
-:root{
-  --bg:#EEF2FA;
-  --surface:#fff;
-  --surface-alt:#E7EDFB;
-  --ink:#13203D;
-  --ink-soft:#4B5A78;
-  --ink-faint:#8893A8;
-  --border:rgba(19,32,61,.12);
-  --border-strong:rgba(19,32,61,.25);
-
-  --blue:#1857D6;
-  --blue-dark:#0E3C9C;
-  --blue-deep:#0A2A6E;
-  --blue-soft:#E2EBFD;
-
-  --red:#E0312B;
-  --red-dark:#A91F1B;
-  --red-soft:#FBE5E4;
-
-  --green:#0E9460;
-  --green-dark:#0A6E47;
-  --green-soft:#E1F6EC;
-
-  --orange:#D9740A;
-  --orange-dark:#9C5404;
-  --orange-soft:#FCEEDD;
-
-  --purple:#7C3AED;
-  --purple-dark:#5B25B8;
-  --purple-soft:#F0E9FD;
-
-  --teal:#0E96A0;
-  --teal-dark:#0A6E76;
-  --teal-soft:#DEF5F6;
-
-  --radius-lg:16px;
-  --radius:12px;
-  --radius-sm:9px;
-  --shadow-card:0 1px 3px rgba(13,30,70,.08);
-  --shadow-pop:0 10px 28px rgba(10,30,80,.16);
-}
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; background: var(--bg); color: var(--ink); min-height: 100vh; }
+body { font-family: system-ui, sans-serif; background: #f5f5f2; color: #1a1a18; min-height: 100vh; }
 .app { max-width: 480px; margin: 0 auto; min-height: 100vh; display: flex; flex-direction: column; }
-
-/* ---- Header con identidad azul/rojo ---- */
-.header { background: linear-gradient(135deg, var(--blue) 0%, var(--blue-deep) 100%); padding: 1.6rem 1.25rem 1.9rem; position: relative; overflow: hidden; }
-.header::after { content:''; position:absolute; right:-40px; top:-40px; width:160px; height:160px; border-radius:50%; background: var(--red); opacity:.18; }
-.header-row { display:flex; align-items:center; justify-content:space-between; position:relative; z-index:1; }
-.header-badge { width:38px; height:38px; border-radius:11px; background: rgba(255,255,255,.16); display:flex; align-items:center; justify-content:center; color:#fff; font-size:19px; flex-shrink:0; }
-.header h1 { font-size: 18px; font-weight: 700; color:#fff; letter-spacing:-.2px; }
-.header p { font-size: 12px; color: rgba(255,255,255,.78); margin-top: 2px; }
-.header-text { flex:1; padding: 0 .75rem; }
-.admin-link { width:38px; height:38px; border-radius:11px; background: var(--red); display:flex; align-items:center; justify-content:center; color:#fff; font-size:17px; flex-shrink:0; text-decoration:none; box-shadow: 0 4px 10px rgba(224,49,43,.35); transition: transform .15s; }
-.admin-link:hover { transform: translateY(-1px); }
-
-.content { flex: 1; padding: 1.1rem 1rem 1.5rem; margin-top: -1.1rem; position: relative; z-index: 2; }
-
-.card { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 1.25rem; margin-bottom: 1rem; box-shadow: var(--shadow-card); }
-.card-title { font-size: 12.5px; font-weight: 700; color: var(--blue-dark); margin-bottom: 1rem; display: flex; align-items: center; gap: 6px; text-transform: uppercase; letter-spacing: .4px; }
-
+.header { padding: 1.25rem 1rem 0; text-align: center; }
+.header h1 { font-size: 18px; font-weight: 500; }
+.header p { font-size: 12px; color: #666; margin-top: 2px; }
+.tabs { display: flex; margin: 1rem 1rem 0; background: #eae8e0; border-radius: 12px; padding: 3px; }
+.tab { flex: 1; padding: 9px 8px; border: none; background: transparent; border-radius: 10px; font-size: 13px; font-weight: 500; color: #555; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 5px; transition: all .2s; }
+.tab.active { background: #fff; color: #1a1a18; box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+.content { flex: 1; padding: 1rem; }
+.card { background: #fff; border: 0.5px solid rgba(0,0,0,.12); border-radius: 12px; padding: 1.25rem; margin-bottom: 1rem; }
+.card-title { font-size: 13px; font-weight: 500; color: #555; margin-bottom: 1rem; display: flex; align-items: center; gap: 6px; }
 .field { margin-bottom: 1rem; }
 .field:last-child { margin-bottom: 0; }
-.field label { display: block; font-size: 12.5px; color: var(--ink-soft); margin-bottom: 5px; font-weight: 600; }
-.field-hint { font-size: 11px; color: var(--ink-faint); font-weight: 400; margin-left: 4px; }
-.field select, .field input { width: 100%; padding: 11px 12px; border: 1.5px solid var(--border-strong); border-radius: var(--radius-sm); font-size: 14px; background: var(--surface); color: var(--ink); transition: border-color .15s, box-shadow .15s; }
-.field select:focus, .field input:focus { outline: none; box-shadow: 0 0 0 3px var(--blue-soft); border-color: var(--blue); }
-.field input.field-err { border-color: var(--red); background: var(--red-soft); }
-
+.field label { display: block; font-size: 12px; color: #555; margin-bottom: 5px; font-weight: 500; }
+.field-hint { font-size: 11px; color: #888; font-weight: 400; margin-left: 4px; }
+.field select, .field input { width: 100%; padding: 9px 12px; border: 0.5px solid rgba(0,0,0,.25); border-radius: 8px; font-size: 14px; background: #fff; color: #1a1a18; }
+.field select:focus, .field input:focus { outline: none; box-shadow: 0 0 0 2px #185FA5; border-color: #185FA5; }
 .motivo-group { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.motivo-btn { padding: 12px 8px; border: 1.5px solid var(--border-strong); border-radius: var(--radius-sm); background: var(--surface); color: var(--ink-soft); font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all .15s; }
-.motivo-btn:hover { border-color: var(--blue); color: var(--blue-dark); }
-.motivo-btn.sel-cobro       { background: var(--green);  border-color: var(--green);  color: #fff; box-shadow: 0 4px 10px rgba(14,148,96,.3); }
-.motivo-btn.sel-venta       { background: var(--blue);   border-color: var(--blue);   color: #fff; box-shadow: 0 4px 10px rgba(24,87,214,.32); }
-.motivo-btn.sel-devolucion  { background: var(--orange); border-color: var(--orange); color: #fff; box-shadow: 0 4px 10px rgba(217,116,10,.3); }
-.motivo-btn.sel-garantia    { background: var(--purple); border-color: var(--purple); color: #fff; box-shadow: 0 4px 10px rgba(124,58,237,.3); }
-.motivo-btn.sel-visita      { background: var(--red);    border-color: var(--red);    color: #fff; box-shadow: 0 4px 10px rgba(224,49,43,.32); }
-.motivo-btn.sel-prospeccion { background: var(--teal);   border-color: var(--teal);   color: #fff; box-shadow: 0 4px 10px rgba(14,150,160,.3); }
-
-.loc-btn { width: 100%; padding: 12px 12px; border: 1.5px solid var(--border-strong); border-radius: var(--radius-sm); background: var(--surface); color: var(--ink-soft); font-size: 13px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all .15s; }
-.loc-btn:hover:not(:disabled) { border-color: var(--blue); }
-.loc-btn.got { border-color: var(--green); color: var(--green-dark); background: var(--green-soft); }
-.loc-btn.err { border-color: var(--red); color: var(--red-dark); background: var(--red-soft); }
+.motivo-btn { padding: 10px 8px; border: 0.5px solid rgba(0,0,0,.2); border-radius: 8px; background: #fff; color: #555; font-size: 13px; font-weight: 500; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all .15s; }
+.motivo-btn.sel-cobro { background: #E1F5EE; border-color: #0F6E56; color: #085041; }
+.motivo-btn.sel-venta { background: #E6F1FB; border-color: #185FA5; color: #0C447C; }
+.motivo-btn.sel-devolucion { background: #FDF4E7; border-color: #B06D0A; color: #7A4C06; }
+.motivo-btn.sel-garantia { background: #F4EAF9; border-color: #8B3DB8; color: #5E2880; }
+.motivo-btn.sel-visita { background: #FEF0F0; border-color: #C0392B; color: #922B21; }
+.loc-btn { width: 100%; padding: 10px 12px; border: 0.5px solid rgba(0,0,0,.2); border-radius: 8px; background: #fff; color: #555; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+.loc-btn.got { border-color: #0F6E56; color: #085041; background: #E1F5EE; }
+.loc-btn.err { border-color: #993C1D; color: #712B13; background: #FAECE7; }
 .loc-text { flex: 1; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
-#map-container { border-radius: var(--radius-sm); overflow: hidden; height: 160px; display: none; border: 1.5px solid var(--border); margin-top: 10px; }
+#map-container { border-radius: 8px; overflow: hidden; height: 160px; display: none; border: 0.5px solid rgba(0,0,0,.15); margin-top: 10px; }
 #map-frame { width: 100%; height: 100%; border: none; }
-
-.submit-wrap { position: sticky; bottom: 0; padding-top: .25rem; }
-.submit-btn { width: 100%; padding: 15px; border: none; border-radius: var(--radius-sm); background: linear-gradient(135deg, var(--blue) 0%, var(--blue-dark) 100%); color: #fff; font-size: 15px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all .15s; box-shadow: var(--shadow-pop); }
-.submit-btn:disabled { opacity: .4; cursor: not-allowed; box-shadow:none; }
-.submit-btn:not(:disabled):hover { transform: translateY(-1px); }
-.submit-hint { font-size: 11.5px; color: var(--red-dark); text-align: center; margin-top: 8px; min-height: 14px; font-weight: 500; }
-
-.toast { position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%); background: var(--green-dark); color: #fff; padding: 11px 20px; border-radius: var(--radius-sm); font-size: 14px; font-weight: 600; z-index: 9999; opacity: 0; transition: opacity .3s; white-space: nowrap; pointer-events: none; box-shadow: var(--shadow-pop); }
+.submit-btn { width: 100%; padding: 13px; border: none; border-radius: 8px; background: #185FA5; color: #fff; font-size: 15px; font-weight: 500; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; }
+.submit-btn:disabled { opacity: .45; cursor: not-allowed; }
+.submit-btn:not(:disabled):hover { background: #0C447C; }
+.lock-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 3rem 1.5rem; gap: 1rem; text-align: center; }
+.lock-icon { font-size: 48px; color: #888; }
+.lock-screen h3 { font-size: 16px; font-weight: 500; }
+.lock-screen p { font-size: 13px; color: #666; }
+.pin-wrap { display: flex; gap: 8px; width: 100%; max-width: 280px; }
+.pin-wrap input { flex: 1; padding: 10px 12px; border: 0.5px solid rgba(0,0,0,.25); border-radius: 8px; font-size: 18px; text-align: center; letter-spacing: 6px; }
+.pin-wrap input.pin-err { border-color: #E24B4A; background: #FCEBEB; }
+.pin-wrap button { padding: 10px 18px; border: none; border-radius: 8px; background: #185FA5; color: #fff; font-size: 14px; font-weight: 500; cursor: pointer; }
+#pin-error { color: #A32D2D; font-size: 12px; display: none; }
+.admin-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
+.admin-top h2 { font-size: 16px; font-weight: 500; }
+.btn-lock { padding: 6px 12px; border: 0.5px solid #A32D2D; border-radius: 8px; background: transparent; color: #A32D2D; font-size: 12px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 5px; }
+.btn-lock:hover { background: #FCEBEB; }
+.filter-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+.filter-field label { font-size: 11px; color: #555; margin-bottom: 3px; display: block; font-weight: 500; }
+.filter-field select, .filter-field input { width: 100%; padding: 7px 10px; border: 0.5px solid rgba(0,0,0,.2); border-radius: 8px; font-size: 13px; background: #fff; color: #1a1a18; }
+.filter-actions { display: flex; gap: 8px; margin-top: 8px; }
+.btn-filter { flex: 1; padding: 9px; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; }
+.btn-filter.blue { border: 0.5px solid #185FA5; background: transparent; color: #185FA5; }
+.btn-filter.blue:hover { background: #E6F1FB; }
+.btn-filter.green { border: 0.5px solid #0F6E56; background: transparent; color: #085041; }
+.btn-filter.green:hover { background: #E1F5EE; }
+.stats-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 1rem; }
+.stat { background: #eae8e0; border-radius: 8px; padding: .75rem 1rem; }
+.stat .val { font-size: 22px; font-weight: 500; }
+.stat .lbl { font-size: 11px; color: #555; margin-top: 1px; }
+.record-card { background: #fff; border: 0.5px solid rgba(0,0,0,.1); border-radius: 12px; padding: 1rem; margin-bottom: .75rem; display: flex; gap: 10px; align-items: flex-start; }
+.record-avatar { width: 38px; height: 38px; border-radius: 50%; background: #B5D4F4; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 500; color: #0C447C; flex-shrink: 0; }
+.record-body { flex: 1; min-width: 0; }
+.record-name { font-size: 14px; font-weight: 500; margin-bottom: 3px; }
+.record-meta { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; margin-bottom: 3px; }
+.badge { padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 500; }
+.badge-cobro { background: #E1F5EE; color: #085041; }
+.badge-venta { background: #E6F1FB; color: #0C447C; }
+.badge-devolucion { background: #FDF4E7; color: #7A4C06; }
+.badge-devolucion_garantia { background: #F4EAF9; color: #5E2880; }
+.badge-visita_comercial { background: #FEF0F0; color: #922B21; }
+.badge-km { background: #F1EFE8; color: #444441; }
+.badge-date { font-size: 11px; color: #666; }
+.record-cliente { font-size: 12px; color: #444; margin-top: 2px; }
+.record-loc { font-size: 11px; color: #888; display: flex; align-items: center; gap: 4px; margin-top: 2px; }
+.record-actions { display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; }
+.icon-btn { padding: 6px; border: 0.5px solid rgba(0,0,0,.12); border-radius: 8px; background: transparent; color: #555; cursor: pointer; display: flex; align-items: center; font-size: 16px; }
+.icon-btn.map:hover { background: #E1F5EE; color: #0F6E56; border-color: #0F6E56; }
+.icon-btn.del:hover { background: #FCEBEB; color: #A32D2D; border-color: #E24B4A; }
+.empty { text-align: center; padding: 3rem 1rem; color: #888; }
+.empty i { font-size: 40px; margin-bottom: .75rem; display: block; }
+.loading { text-align: center; padding: 2rem; color: #888; font-size: 14px; display: flex; align-items: center; justify-content: center; gap: 8px; }
+.toast { position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%); background: #1D9E75; color: #fff; padding: 10px 20px; border-radius: 8px; font-size: 14px; font-weight: 500; z-index: 9999; opacity: 0; transition: opacity .3s; white-space: nowrap; pointer-events: none; }
 .toast.show { opacity: 1; }
-.toast.err { background: var(--red-dark); }
-
-@media (min-width: 760px) {
-  .app { max-width: 560px; }
-  .header { padding: 2.1rem 1.75rem 2.4rem; }
-  .header h1 { font-size: 21px; }
-  .content { padding: 1.1rem 1.4rem 2rem; }
-}
+.toast.err { background: #D85A30; }
 </style>
 </head>
 <body>
 <div class="app">
   <div class="header">
-    <div class="header-row">
-      <div class="header-badge"><i class="ti ti-map-pin"></i></div>
-      <div class="header-text">
-        <h1>Registro de visitas</h1>
-        <p>Control de asesores en campo</p>
-      </div>
-      <a class="admin-link" href="admin.html" title="Panel administrador">
-        <i class="ti ti-shield-lock"></i>
-      </a>
-    </div>
+    <h1><i class="ti ti-map-pin" style="vertical-align:-2px"></i> Registro de visitas</h1>
+    <p>Control de asesores en campo</p>
   </div>
 
-  <div class="content">
+  <div class="tabs">
+    <button class="tab active" onclick="showTab('asesor')" id="tab-asesor">
+      <i class="ti ti-user" style="font-size:15px"></i> Asesor
+    </button>
+    <button class="tab" onclick="showTab('admin')" id="tab-admin">
+      <i class="ti ti-shield" style="font-size:15px"></i> Admin
+    </button>
+  </div>
+
+  <!-- PESTAÑA ASESOR -->
+  <div class="content" id="content-asesor">
     <div class="card">
       <div class="card-title"><i class="ti ti-user-circle" style="font-size:16px"></i> Datos del asesor</div>
       <div class="field">
@@ -149,8 +134,8 @@ body { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; background
         </select>
       </div>
       <div class="field">
-        <label>Cliente visitado <span class="field-hint">(o nombre del prospecto)</span></label>
-        <input type="text" id="cliente" placeholder="Nombre del cliente o prospecto" oninput="checkReady()">
+        <label>Cliente visitado</label>
+        <input type="text" id="cliente" placeholder="Nombre del cliente" oninput="checkReady()">
       </div>
       <div class="field">
         <label>Kilometraje del vehículo</label>
@@ -171,11 +156,8 @@ body { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; background
           <button class="motivo-btn" id="btn-garantia" onclick="selectMotivo('devolucion_garantia')">
             <i class="ti ti-shield-check" style="font-size:16px"></i> Dev / Garantía
           </button>
-          <button class="motivo-btn" id="btn-visita" onclick="selectMotivo('visita_comercial')">
+          <button class="motivo-btn" id="btn-visita" onclick="selectMotivo('visita_comercial')" style="grid-column: span 2;">
             <i class="ti ti-briefcase" style="font-size:16px"></i> Visita Comercial
-          </button>
-          <button class="motivo-btn" id="btn-prospeccion" onclick="selectMotivo('prospeccion_cliente')">
-            <i class="ti ti-user-search" style="font-size:16px"></i> Prospección Cliente
           </button>
         </div>
       </div>
@@ -192,11 +174,84 @@ body { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; background
       </div>
     </div>
 
-    <div class="submit-wrap">
-      <button class="submit-btn" id="submit-btn" onclick="submitForm()" disabled>
-        <i class="ti ti-circle-check" style="font-size:18px"></i> Registrar visita
-      </button>
-      <div class="submit-hint" id="submit-hint"></div>
+    <button class="submit-btn" id="submit-btn" onclick="submitForm()" disabled>
+      <i class="ti ti-circle-check" style="font-size:18px"></i> Registrar visita
+    </button>
+  </div>
+
+  <!-- PESTAÑA ADMIN -->
+  <div class="content" id="content-admin" style="display:none">
+    <div id="lock-wrap">
+      <div class="lock-screen">
+        <i class="ti ti-lock lock-icon"></i>
+        <h3>Acceso administrador</h3>
+        <p>Ingresa el código de 4 dígitos para continuar</p>
+        <div class="pin-wrap">
+          <input type="password" id="pin-input" placeholder="••••" maxlength="4"
+            onkeydown="if(event.key==='Enter') checkPin()">
+          <button onclick="checkPin()">Entrar</button>
+        </div>
+        <p id="pin-error">Código incorrecto. Intenta de nuevo.</p>
+      </div>
+    </div>
+
+    <div id="admin-panel" style="display:none">
+      <div class="admin-top">
+        <h2><i class="ti ti-clipboard-list" style="font-size:16px;vertical-align:-2px"></i> Registros</h2>
+        <button class="btn-lock" onclick="lockAdmin()">
+          <i class="ti ti-lock" style="font-size:14px"></i> Cerrar sesión
+        </button>
+      </div>
+
+      <div class="card">
+        <div class="filter-row">
+          <div class="filter-field"><label>Desde</label><input type="date" id="f-desde"></div>
+          <div class="filter-field"><label>Hasta</label><input type="date" id="f-hasta"></div>
+        </div>
+        <div class="filter-row">
+          <div class="filter-field">
+            <label>Asesor</label>
+            <select id="f-asesor">
+              <option value="">Todos</option>
+              <option>JOSUE PINEDA</option>
+              <option>MOISES MOLINA</option>
+              <option>CARLOS HERRERA</option>
+              <option>DANIEL ESPAÑA</option>
+              <option>FERNANDO MEZA</option>
+              <option>CRISTIAN SALAZAR</option>
+              <option>CRISTINA CIFUENTES</option>
+              <option>DIEGO ACHACHI</option>
+              <option>PABLO PERALTA</option>
+              <option>SEBASTIAN VANEGAS</option>
+              <option>EDISON MAYORGA</option>
+              <option>EDUARDO PICO</option>
+              <option>CARLOS GRANJA</option>
+            </select>
+          </div>
+          <div class="filter-field">
+            <label>Motivo</label>
+            <select id="f-motivo">
+              <option value="">Todos</option>
+              <option value="cobro">Cobro</option>
+              <option value="venta">Venta</option>
+              <option value="devolucion">Devolución</option>
+              <option value="devolucion_garantia">Dev / Garantía</option>
+              <option value="visita_comercial">Visita Comercial</option>
+            </select>
+          </div>
+        </div>
+        <div class="filter-actions">
+          <button class="btn-filter blue" onclick="renderAdmin()">
+            <i class="ti ti-filter" style="font-size:14px"></i> Filtrar
+          </button>
+          <button class="btn-filter green" onclick="exportExcel()">
+            <i class="ti ti-file-spreadsheet" style="font-size:14px"></i> Exportar Excel
+          </button>
+        </div>
+      </div>
+
+      <div class="stats-row" id="stats-row"></div>
+      <div id="admin-records"></div>
     </div>
   </div>
 </div>
@@ -210,38 +265,73 @@ body { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; background
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyfU4JbCUT6eqThx_0h2KYU3hEKIcgkC1ep0_vYunQd_gtkk4sqt63pFWdslaj6QpK6zw/exec';
 // ============================================================
 
-let selectedMotivos = [];
+const ADMIN_PIN = '2025';
+let selectedMotivos = [];   // ahora es una lista: se pueden elegir varios
 let locationData    = null;
+let allRecords      = [];
 
+/* ---- llamada GET a Apps Script (no tiene problemas de CORS) ---- */
 function api(params) {
   const url = SCRIPT_URL + '?' + new URLSearchParams(params).toString();
   return fetch(url, { redirect: 'follow' }).then(r => r.json());
 }
 
+/* ---- Tabs ---- */
+function showTab(tab) {
+  document.getElementById('content-asesor').style.display = tab === 'asesor' ? 'block' : 'none';
+  document.getElementById('content-admin').style.display  = tab === 'admin'  ? 'block' : 'none';
+  document.getElementById('tab-asesor').className = 'tab' + (tab === 'asesor' ? ' active' : '');
+  document.getElementById('tab-admin').className  = 'tab' + (tab === 'admin'  ? ' active' : '');
+}
+
+/* ---- PIN ---- */
+function checkPin() {
+  const val = document.getElementById('pin-input').value.trim();
+  if (val === ADMIN_PIN) {
+    document.getElementById('lock-wrap').style.display   = 'none';
+    document.getElementById('admin-panel').style.display = 'block';
+    document.getElementById('pin-error').style.display   = 'none';
+    document.getElementById('pin-input').value = '';
+    renderAdmin();
+  } else {
+    const inp = document.getElementById('pin-input');
+    inp.classList.add('pin-err');
+    document.getElementById('pin-error').style.display = 'block';
+    setTimeout(() => { inp.classList.remove('pin-err'); inp.value = ''; }, 1200);
+  }
+}
+
+function lockAdmin() {
+  document.getElementById('lock-wrap').style.display   = 'block';
+  document.getElementById('admin-panel').style.display = 'none';
+}
+
+/* ---- Motivo (selección múltiple: alterna cada botón) ---- */
 function selectMotivo(m) {
   const i = selectedMotivos.indexOf(m);
-  if (i === -1) selectedMotivos.push(m);
-  else          selectedMotivos.splice(i, 1);
+  if (i === -1) selectedMotivos.push(m);   // agregar
+  else          selectedMotivos.splice(i, 1); // quitar
   updateMotivoButtons();
   checkReady();
 }
 
-const MOTIVO_MAP = {
-  cobro:               { id: 'btn-cobro',       cls: 'sel-cobro' },
-  venta:               { id: 'btn-venta',       cls: 'sel-venta' },
-  devolucion:          { id: 'btn-devolucion',  cls: 'sel-devolucion' },
-  devolucion_garantia: { id: 'btn-garantia',    cls: 'sel-garantia' },
-  visita_comercial:    { id: 'btn-visita',      cls: 'sel-visita' },
-  prospeccion_cliente: { id: 'btn-prospeccion', cls: 'sel-prospeccion' }
-};
-
 function updateMotivoButtons() {
-  Object.keys(MOTIVO_MAP).forEach(m => {
-    const btn = document.getElementById(MOTIVO_MAP[m].id);
-    btn.className = 'motivo-btn' + (selectedMotivos.includes(m) ? ' ' + MOTIVO_MAP[m].cls : '');
+  const sel = {
+    cobro:               { id: 'btn-cobro',      cls: 'sel-cobro'      },
+    venta:               { id: 'btn-venta',      cls: 'sel-venta'      },
+    devolucion:          { id: 'btn-devolucion', cls: 'sel-devolucion' },
+    devolucion_garantia: { id: 'btn-garantia',   cls: 'sel-garantia'   },
+    visita_comercial:    { id: 'btn-visita',     cls: 'sel-visita'     }
+  };
+  Object.keys(sel).forEach(m => {
+    const btn = document.getElementById(sel[m].id);
+    btn.className = 'motivo-btn' + (selectedMotivos.includes(m) ? ' ' + sel[m].cls : '');
   });
+  // mantener el ancho completo del botón de visita comercial
+  document.getElementById('btn-visita').style.gridColumn = 'span 2';
 }
 
+/* ---- GPS ---- */
 function getLocation() {
   const btn  = document.getElementById('loc-btn');
   const txt  = document.getElementById('loc-text');
@@ -280,19 +370,16 @@ function getLocation() {
   );
 }
 
+/* ---- Validar formulario ---- */
 function checkReady() {
-  const faltan = [];
-  if (!document.getElementById('asesor').value)        faltan.push('asesor');
-  if (!document.getElementById('cliente').value.trim()) faltan.push('cliente');
-  if (!document.getElementById('km').value)             faltan.push('kilometraje');
-  if (!selectedMotivos.length)                          faltan.push('motivo de visita');
-  if (!locationData)                                     faltan.push('ubicación GPS');
-
-  document.getElementById('submit-btn').disabled = faltan.length > 0;
-  document.getElementById('submit-hint').textContent =
-    faltan.length ? 'Falta: ' + faltan.join(', ') : '';
+  const ok = document.getElementById('asesor').value &&
+             document.getElementById('cliente').value.trim() &&
+             document.getElementById('km').value &&
+             selectedMotivos.length > 0 && locationData;
+  document.getElementById('submit-btn').disabled = !ok;
 }
 
+/* ---- Enviar registro ---- */
 async function submitForm() {
   const asesor  = document.getElementById('asesor').value;
   const cliente = document.getElementById('cliente').value.trim();
@@ -312,7 +399,7 @@ async function submitForm() {
       asesor,
       cliente,
       km:      parseInt(km),
-      motivo:  selectedMotivos.join(', '),
+      motivo:  selectedMotivos.join(', '),   // varios motivos separados por coma
       lat:     locationData.lat,
       lng:     locationData.lng,
       acc:     locationData.acc,
@@ -346,9 +433,129 @@ function resetForm() {
   document.getElementById('submit-btn').disabled  = true;
   document.getElementById('submit-btn').innerHTML =
     '<i class="ti ti-circle-check" style="font-size:18px"></i> Registrar visita';
-  document.getElementById('submit-hint').textContent = '';
 }
 
+/* ---- helper: lista de motivos de un registro ---- */
+function motivosDe(r) {
+  return (r.Motivo || '').toLowerCase().split(',').map(s => s.trim()).filter(Boolean);
+}
+
+/* ---- Admin: filtrar y renderizar ---- */
+function getFiltered() {
+  const desde  = document.getElementById('f-desde').value;
+  const hasta  = document.getElementById('f-hasta').value;
+  const asesor = document.getElementById('f-asesor').value;
+  const motivo = document.getElementById('f-motivo').value;
+  return allRecords.filter(r => {
+    if (desde  && r.Fecha < desde)   return false;
+    if (hasta  && r.Fecha > hasta)   return false;
+    if (asesor && r.Asesor !== asesor) return false;
+    if (motivo && !motivosDe(r).includes(motivo)) return false; // coincide si contiene el motivo
+    return true;
+  });
+}
+
+async function renderAdmin() {
+  document.getElementById('admin-records').innerHTML =
+    '<div class="loading"><i class="ti ti-loader-2"></i> Cargando registros...</div>';
+  document.getElementById('stats-row').innerHTML = '';
+
+  try {
+    const data = await api({ action: 'getAll' });
+    allRecords = data.records || [];
+  } catch(e) {
+    document.getElementById('admin-records').innerHTML =
+      '<div class="empty"><i class="ti ti-wifi-off"></i><p>Error al cargar. Verifica conexión.</p></div>';
+    return;
+  }
+
+  const fr     = getFiltered();
+  const cobros = fr.filter(r => motivosDe(r).includes('cobro')).length;
+  const ventas = fr.filter(r => motivosDe(r).includes('venta')).length;
+
+  document.getElementById('stats-row').innerHTML =
+    '<div class="stat"><div class="val">' + fr.length + '</div><div class="lbl">Total registros</div></div>' +
+    '<div class="stat"><div class="val">' + cobros + ' / ' + ventas + '</div><div class="lbl">Cobros / Ventas</div></div>';
+
+  const c = document.getElementById('admin-records');
+  if (!fr.length) {
+    c.innerHTML = '<div class="empty"><i class="ti ti-clipboard-x"></i><p>No hay registros</p></div>';
+    return;
+  }
+
+  c.innerHTML = fr.map(r => {
+    const nombre = r.Asesor || '';
+    const ini    = nombre.split(' ').map(w => w[0]).join('').slice(0, 2);
+    const motivos = motivosDe(r);
+    const badges = motivos.length
+      ? motivos.map(mo => '<span class="badge badge-' + mo + '">' + mo.toUpperCase().replace(/_/g, ' ') + '</span>').join('')
+      : '';
+    return '<div class="record-card">' +
+      '<div class="record-avatar">' + ini + '</div>' +
+      '<div class="record-body">' +
+        '<div class="record-name">' + nombre + '</div>' +
+        '<div class="record-meta">' +
+          badges +
+          '<span class="badge badge-km"><i class="ti ti-car" style="font-size:11px"></i> ' +
+            Number(r.Kilometraje || 0).toLocaleString() + ' km</span>' +
+          '<span class="badge-date">' + (r.Fecha || '') + ' ' + (r.Hora || '') + '</span>' +
+        '</div>' +
+        (r.Cliente ? '<div class="record-cliente"><i class="ti ti-building-store" style="font-size:11px"></i> ' + r.Cliente + '</div>' : '') +
+        '<div class="record-loc"><i class="ti ti-map-pin" style="font-size:11px"></i> ' +
+          (r.Latitud || '') + ', ' + (r.Longitud || '') + '</div>' +
+      '</div>' +
+      '<div class="record-actions">' +
+        '<button class="icon-btn map" onclick="openMap(\'' + r.Latitud + '\',\'' + r.Longitud + '\')" title="Ver en Maps">' +
+          '<i class="ti ti-map-2"></i></button>' +
+        '<button class="icon-btn del" onclick="deleteRecord(\'' + r.ID + '\')" title="Eliminar">' +
+          '<i class="ti ti-trash"></i></button>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function openMap(lat, lng) {
+  window.open('https://maps.google.com/maps?q=' + lat + ',' + lng, '_blank');
+}
+
+async function deleteRecord(id) {
+  if (!confirm('¿Eliminar este registro?')) return;
+  try {
+    await api({ action: 'delete', id });
+    showToast('Registro eliminado', false);
+    renderAdmin();
+  } catch(e) {
+    showToast('Error al eliminar', true);
+  }
+}
+
+/* ---- Exportar Excel ---- */
+function exportExcel() {
+  const fr = getFiltered();
+  if (!fr.length) { showToast('No hay registros para exportar', true); return; }
+  const desde = document.getElementById('f-desde').value || 'inicio';
+  const hasta  = document.getElementById('f-hasta').value  || 'hoy';
+  const data = fr.map(r => ({
+    'Asesor':           r.Asesor        || '',
+    'Cliente':          r.Cliente       || '',
+    'Fecha':            r.Fecha         || '',
+    'Hora':             r.Hora          || '',
+    'Motivo':           r.Motivo        || '',
+    'Kilometraje':      r.Kilometraje   || '',
+    'Latitud':          r.Latitud       || '',
+    'Longitud':         r.Longitud      || '',
+    'Precision GPS(m)': r.Precision_GPS || '',
+    'Google Maps': 'https://maps.google.com/?q=' + r.Latitud + ',' + r.Longitud
+  }));
+  const ws = XLSX.utils.json_to_sheet(data);
+  ws['!cols'] = [{wch:22},{wch:22},{wch:12},{wch:8},{wch:24},{wch:14},{wch:14},{wch:14},{wch:18},{wch:40}];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Visitas');
+  XLSX.writeFile(wb, 'Visitas_' + desde + '_a_' + hasta + '.xlsx');
+  showToast('Excel descargado', false);
+}
+
+/* ---- Toast ---- */
 function showToast(msg, isErr) {
   const t = document.getElementById('toast');
   t.textContent = msg;
