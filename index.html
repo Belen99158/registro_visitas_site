@@ -1,114 +1,121 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Registro de Visitas | CRM</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.7.0/dist/tabler-icons.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-    
-    <style>
-        :root {
-            --primary: #2563eb; --primary-dark: #1d4ed8; --bg-app: #f8fafc;
-            --card-bg: #ffffff; --text-main: #1e293b; --text-muted: #64748b;
-            --border: #e2e8f0; --radius: 12px; --shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
-        }
-        body { font-family: system-ui, sans-serif; background-color: var(--bg-app); color: var(--text-main); margin: 0; padding-bottom: 2rem; }
-        .app { max-width: 500px; margin: 0 auto; }
-        .header { padding: 2rem 1.5rem 1rem; text-align: center; }
-        .card { background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.5rem; margin: 0 1rem 1rem; box-shadow: var(--shadow); }
-        .field { margin-bottom: 1.25rem; }
-        .field label { display: block; font-size: 0.8rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.5rem; text-transform: uppercase; }
-        .field input, .field select { width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--border); border-radius: 8px; font-size: 1rem; }
-        
-        /* Dashboard Stats */
-        .stats-container { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 1.5rem; }
-        .stat-card { background: white; padding: 1rem; border-radius: var(--radius); border: 1px solid var(--border); text-align: center; box-shadow: var(--shadow); }
-        .stat-val { font-size: 1.25rem; font-weight: 700; color: var(--primary); }
-        .stat-lbl { font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; }
-
-        .submit-btn { width: calc(100% - 2rem); margin: 0 1rem; padding: 1rem; border: none; border-radius: 8px; background: var(--primary); color: white; font-weight: 600; cursor: pointer; }
-        .tabs { margin: 1rem; background: #e2e8f0; padding: 4px; border-radius: 10px; display: flex; }
-        .tab { flex: 1; padding: 0.75rem; border: none; background: transparent; border-radius: 8px; cursor: pointer; color: var(--text-muted); }
-        .tab.active { background: white; color: var(--primary); box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-        .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #333; color: #fff; padding: 10px 20px; border-radius: 8px; opacity: 0; transition: opacity 0.3s; z-index: 1000; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Registro de Visitas | CRM</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.7.0/dist/tabler-icons.min.css">
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+    :root { --primary: #185FA5; --bg: #f5f5f2; --card: #ffffff; --text: #1a1a18; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+    .app { max-width: 480px; margin: 0 auto; min-height: 100vh; display: flex; flex-direction: column; }
+    .header { padding: 1.5rem 1rem 0; text-align: center; }
+    .tabs { display: flex; margin: 1rem 1rem 0; background: #eae8e0; border-radius: 12px; padding: 3px; }
+    .tab { flex: 1; padding: 10px; border: none; background: transparent; border-radius: 10px; font-weight: 500; cursor: pointer; color: #555; }
+    .tab.active { background: #fff; color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+    .content { padding: 1rem; }
+    .card { background: var(--card); border: 0.5px solid rgba(0,0,0,.12); border-radius: 12px; padding: 1.25rem; margin-bottom: 1rem; }
+    .field { margin-bottom: 1rem; }
+    .field label { font-size: 12px; color: #555; display: block; margin-bottom: 5px; }
+    .field input, .field select { width: 100%; padding: 10px; border: 0.5px solid rgba(0,0,0,.25); border-radius: 8px; font-size: 14px; }
+    .motivo-group { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .motivo-btn { padding: 10px; border: 0.5px solid rgba(0,0,0,.2); border-radius: 8px; background: #fff; cursor: pointer; font-size: 13px; }
+    .motivo-btn.sel { background: #E6F1FB; border-color: var(--primary); color: var(--primary); }
+    .submit-btn { width: 100%; padding: 13px; border: none; border-radius: 8px; background: var(--primary); color: #fff; font-weight: 600; cursor: pointer; }
+    .submit-btn:disabled { opacity: .5; }
+    .stats-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 1rem; }
+    .stat { background: #eae8e0; border-radius: 8px; padding: 1rem; text-align: center; }
+    .val { font-size: 20px; font-weight: bold; }
+    .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #333; color: #fff; padding: 10px 20px; border-radius: 8px; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
+</style>
 </head>
 <body>
 
 <div class="app">
-    <div class="header">
-        <h1>Registro de Visitas</h1>
-    </div>
-
+    <div class="header"><h1>Registro de Visitas</h1></div>
     <div class="tabs">
         <button class="tab active" onclick="showTab('asesor')" id="tab-asesor">Asesor</button>
         <button class="tab" onclick="showTab('admin')" id="tab-admin">Admin</button>
     </div>
 
-    <div id="content-asesor">
+    <div class="content" id="content-asesor">
         <div class="card">
-            <div class="field"><label>Asesor</label><select id="asesor"><option>JOSUE PINEDA</option><option>MOISES MOLINA</option></select></div>
+            <div class="field"><label>Asesor</label><select id="asesor"><option value="">Selecciona...</option><option>JOSUE PINEDA</option><option>MOISES MOLINA</option></select></div>
             <div class="field"><label>Cliente</label><input type="text" id="cliente"></div>
-            <button class="submit-btn" onclick="submitForm()">Registrar Visita</button>
+            <div class="field"><label>Kilometraje</label><input type="number" id="km"></div>
+            <div class="motivo-group">
+                <button class="motivo-btn" id="btn-cobro" onclick="toggleMotivo('cobro')">Cobro</button>
+                <button class="motivo-btn" id="btn-venta" onclick="toggleMotivo('venta')">Venta</button>
+            </div>
+            <button class="submit-btn" style="margin-top: 1rem;" onclick="submitForm()">Registrar</button>
         </div>
     </div>
 
-    <div id="content-admin" style="display:none">
-        <div class="stats-container" style="padding: 0 1rem;">
-            <div class="stat-card"><div class="stat-val" id="kpi-total">0</div><div class="stat-lbl">Total</div></div>
-            <div class="stat-card"><div class="stat-val" id="kpi-ventas">0</div><div class="stat-lbl">Ventas</div></div>
-            <div class="stat-card"><div class="stat-val" id="kpi-cobros">0</div><div class="stat-lbl">Cobros</div></div>
+    <div class="content" id="content-admin" style="display:none">
+        <div class="stats-row" id="stats-row">
+            <div class="stat"><div class="val" id="kpi-total">0</div><label>Total</label></div>
+            <div class="stat"><div class="val" id="kpi-ventas">0</div><label>Ventas</label></div>
         </div>
-        <div class="card">
-            <div id="admin-records">Cargando datos...</div>
-        </div>
+        <div id="admin-records">Cargando...</div>
     </div>
 </div>
 
 <div class="toast" id="toast"></div>
 
 <script>
-    const SCRIPT_URL = 'TU_URL_AQUÍ';
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyfU4JbCUT6eqThx_0h2KYU3hEKIcgkC1ep0_vYunQd_gtkk4sqt63pFWdslaj6QpK6zw/exec';
+    let selectedMotivos = [];
+    let allRecords = [];
 
     function showTab(tab) {
         document.getElementById('content-asesor').style.display = tab === 'asesor' ? 'block' : 'none';
         document.getElementById('content-admin').style.display = tab === 'admin' ? 'block' : 'none';
         document.getElementById('tab-asesor').classList.toggle('active', tab === 'asesor');
         document.getElementById('tab-admin').classList.toggle('active', tab === 'admin');
+        if(tab === 'admin') loadAdmin();
     }
 
-    function updateDashboard(records) {
-        document.getElementById('kpi-total').textContent = records.length;
-        document.getElementById('kpi-ventas').textContent = records.filter(r => r.Motivo?.includes('venta')).length;
-        document.getElementById('kpi-cobros').textContent = records.filter(r => r.Motivo?.includes('cobro')).length;
+    function toggleMotivo(m) {
+        const i = selectedMotivos.indexOf(m);
+        i === -1 ? selectedMotivos.push(m) : selectedMotivos.splice(i, 1);
+        document.getElementById('btn-'+m).classList.toggle('sel', i === -1);
     }
 
-    async function loadData() {
+    async function loadAdmin() {
         try {
             const res = await fetch(SCRIPT_URL + '?action=getAll');
             const data = await res.json();
-            updateDashboard(data.records || []);
-            document.getElementById('admin-records').innerHTML = "Datos cargados correctamente.";
+            allRecords = data.records || [];
+            document.getElementById('kpi-total').textContent = allRecords.length;
+            document.getElementById('kpi-ventas').textContent = allRecords.filter(r => r.Motivo?.includes('venta')).length;
+            document.getElementById('admin-records').innerHTML = allRecords.map(r => `
+                <div class="card"><strong>${r.Asesor}</strong><br>${r.Cliente}</div>
+            `).join('');
         } catch(e) {
-            document.getElementById('admin-records').innerHTML = "Error al cargar.";
+            document.getElementById('admin-records').innerHTML = "Error al cargar datos.";
         }
+    }
+
+    async function submitForm() {
+        const data = {
+            action: 'insert',
+            asesor: document.getElementById('asesor').value,
+            cliente: document.getElementById('cliente').value,
+            km: document.getElementById('km').value,
+            motivo: selectedMotivos.join(', ')
+        };
+        showToast('Guardando...');
+        await fetch(SCRIPT_URL + '?' + new URLSearchParams(data));
+        showToast('Guardado correctamente');
     }
 
     function showToast(msg) {
         const t = document.getElementById('toast');
         t.textContent = msg; t.style.opacity = 1;
-        setTimeout(() => t.style.opacity = 0, 3000);
+        setTimeout(() => t.style.opacity = 0, 2000);
     }
-
-    async function submitForm() {
-        showToast('Guardando...');
-        // Lógica de envío aquí
-    }
-
-    // Cargar datos al entrar al admin
-    loadData();
 </script>
-
 </body>
 </html>
