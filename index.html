@@ -549,6 +549,24 @@ function onAsesorChange(mantener) {
 
 const INICIO_TAG = 'INICIO DE ACTIVIDADES';
 
+// Candado local: recuerda en el teléfono que este asesor ya marcó inicio hoy
+function hoyStr() { return new Date().toISOString().split('T')[0]; }
+function inicioKey(asesor) { return 'inicio_' + normalizar(asesor) + '_' + hoyStr(); }
+function inicioLocal(asesor) {
+  try { return localStorage.getItem(inicioKey(asesor)); } catch (e) { return null; }
+}
+function marcarInicioLocal(asesor, hora) {
+  try { localStorage.setItem(inicioKey(asesor), hora); } catch (e) {}
+}
+
+function mostrarInicioOk(hora, pendiente) {
+  document.getElementById('inicio-btn').className = 'inicio-btn';
+  const okIni = document.getElementById('inicio-ok');
+  okIni.innerHTML = '<i class="ti ti-player-play-filled"></i> Actividades iniciadas' +
+    (hora ? ' a las ' + escapeHtml(hora) : '') + (pendiente ? ' (pendiente de envío)' : '');
+  okIni.className = 'inicio-ok show';
+}
+
 async function loadToday() {
   const asesor = document.getElementById('asesor').value;
   if (!asesor) return;
@@ -557,6 +575,16 @@ async function loadToday() {
   document.getElementById('today-count').textContent = '–';
   try {
     const res = await api({ action: 'hoy', asesor });
+
+    // El Apps Script viejo responde {error:'Accion no valida'}: avisar al admin
+    if (res && res.error) {
+      document.getElementById('today-count').textContent = '!';
+      document.getElementById('today-label').textContent =
+        'servidor desactualizado: publica la NUEVA VERSIÓN del Code.gs';
+      loading.style.display = 'none';
+      return;
+    }
+
     const todas = (res.visitas || []);
     // Separa la marca de inicio de las visitas reales
     const inicio = todas.find(v => normalizar(v.cliente) === INICIO_TAG);
@@ -568,21 +596,30 @@ async function loadToday() {
     const tg = document.getElementById('today-toggle');
     tg.style.display = visitasHoy.length ? 'block' : 'none';
     renderTodayList();
+    // La lista del día se muestra abierta para que vean sus registros
+    if (visitasHoy.length) {
+      document.getElementById('today-list').className = 'today-list show';
+      tg.textContent = 'Ocultar lista ▴';
+    }
 
-    // Botón / estado de inicio de actividades
-    const btnIni = document.getElementById('inicio-btn');
-    const okIni  = document.getElementById('inicio-ok');
+    // Botón / estado de inicio de actividades (servidor O candado local)
+    const local = inicioLocal(asesor);
     if (inicio) {
-      btnIni.className = 'inicio-btn';
-      okIni.innerHTML = '<i class="ti ti-player-play-filled"></i> Actividades iniciadas a las ' + escapeHtml(inicio.hora || '');
-      okIni.className = 'inicio-ok show';
+      mostrarInicioOk(inicio.hora, false);
+      marcarInicioLocal(asesor, inicio.hora || '');
+    } else if (local !== null) {
+      mostrarInicioOk(local, true); // registrado sin señal, aún en cola
     } else {
-      btnIni.className = 'inicio-btn show';
-      okIni.className = 'inicio-ok';
+      document.getElementById('inicio-btn').className = 'inicio-btn show';
+      document.getElementById('inicio-ok').className = 'inicio-ok';
     }
   } catch (e) {
     document.getElementById('today-count').textContent = '?';
     document.getElementById('today-label').textContent = 'sin conexión al servidor';
+    // Sin señal: usar el candado local para no permitir doble inicio
+    const local = inicioLocal(asesor);
+    if (local !== null) mostrarInicioOk(local, true);
+    else document.getElementById('inicio-btn').className = 'inicio-btn show';
   }
   loading.style.display = 'none';
 }
@@ -591,6 +628,14 @@ async function loadToday() {
 function iniciarActividades() {
   const asesor = document.getElementById('asesor').value;
   if (!asesor) return;
+
+  // Candado: solo UNA vez al día, aunque no haya señal
+  if (inicioLocal(asesor) !== null) {
+    mostrarInicioOk(inicioLocal(asesor), false);
+    showToast('Ya registraste tu inicio de actividades hoy', true);
+    return;
+  }
+
   const btn = document.getElementById('inicio-btn');
   btn.disabled = true;
   btn.innerHTML = '<i class="ti ti-loader-2"></i> Obteniendo ubicación...';
@@ -611,16 +656,15 @@ function iniciarActividades() {
     btn.innerHTML = '<i class="ti ti-loader-2"></i> Registrando inicio...';
     api(payload).then(res => {
       if (!res.ok) throw new Error();
+      marcarInicioLocal(asesor, payload.hora);
       showToast('✓ Inicio de actividades registrado', false);
       loadToday();
     }).catch(() => {
-      // Sin señal: a la cola, y se marca como iniciado localmente
+      // Sin señal: a la cola, candado local activado igualmente
       const cola = getPendientes(); cola.push(payload); setPendientes(cola);
+      marcarInicioLocal(asesor, payload.hora);
       showToast('Sin señal: el inicio quedó guardado y se enviará solo', true);
-      btn.className = 'inicio-btn';
-      const okIni = document.getElementById('inicio-ok');
-      okIni.innerHTML = '<i class="ti ti-player-play-filled"></i> Actividades iniciadas a las ' + payload.hora + ' (pendiente de envío)';
-      okIni.className = 'inicio-ok show';
+      mostrarInicioOk(payload.hora, true);
     }).finally(() => {
       btn.disabled = false;
       btn.innerHTML = '<i class="ti ti-player-play-filled"></i> Iniciar actividades';
@@ -677,6 +721,10 @@ async function abrirHistorial() {
 
   try {
     const res = await api({ action: 'historial', asesor, dias: 15 });
+    if (res && res.error) {
+      body.innerHTML = '<div class="hist-empty">⚠ El servidor no está actualizado.<br>Hay que pegar el nuevo Code.gs en Apps Script y publicar una <b>NUEVA VERSIÓN</b> de la implementación.</div>';
+      return;
+    }
     const visitas = res.visitas || [];
     if (!visitas.length) {
       body.innerHTML = '<div class="hist-empty">Aún no tienes visitas registradas en los últimos 15 días.</div>';
