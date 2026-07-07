@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Registro de Visitas</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.7.0/dist/tabler-icons.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 :root{
   --bg:#EEF2FA;
@@ -75,6 +76,76 @@ body { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; background
 .field select:focus, .field input:focus { outline: none; box-shadow: 0 0 0 3px var(--blue-soft); border-color: var(--blue); }
 .field input.field-err { border-color: var(--red); background: var(--red-soft); }
 
+/* ---- Panel de visitas del día ---- */
+.today-panel { display:none; background: linear-gradient(135deg, var(--blue-soft) 0%, #F2F6FE 100%); border:1.5px solid var(--blue); border-radius: var(--radius); padding: 12px 14px; margin-bottom: 1rem; }
+.today-panel.show { display:block; }
+.today-head { display:flex; align-items:center; justify-content:space-between; }
+.today-count { display:flex; align-items:baseline; gap:7px; }
+.today-count b { font-size:26px; color: var(--blue-dark); line-height:1; }
+.today-count span { font-size:12.5px; color: var(--ink-soft); font-weight:600; }
+.today-refresh { border:none; background:none; color: var(--blue-dark); font-size:17px; cursor:pointer; padding:4px; border-radius:6px; }
+.today-refresh:hover { background: rgba(24,87,214,.1); }
+.today-list { margin-top:8px; display:none; }
+.today-list.show { display:block; }
+.today-item { font-size:12px; color: var(--ink-soft); padding:5px 0; border-top:1px dashed rgba(19,32,61,.15); display:flex; justify-content:space-between; gap:8px; }
+.today-item .t-hora { color: var(--blue-dark); font-weight:700; flex-shrink:0; }
+.today-toggle { border:none; background:none; color: var(--blue-dark); font-size:11.5px; font-weight:700; cursor:pointer; margin-top:6px; padding:0; }
+.today-loading { font-size:12px; color: var(--ink-faint); }
+.hist-btn { width:100%; margin-top:10px; padding:9px; border:1.5px solid var(--blue); border-radius:var(--radius-sm); background:var(--surface); color:var(--blue-dark); font-size:12.5px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; }
+.hist-btn:hover { background: var(--blue-soft); }
+
+/* ---- Inicio de actividades ---- */
+.inicio-btn { width:100%; margin-top:10px; padding:12px; border:none; border-radius:var(--radius-sm); background: linear-gradient(135deg, var(--green) 0%, var(--green-dark) 100%); color:#fff; font-size:13.5px; font-weight:700; cursor:pointer; display:none; align-items:center; justify-content:center; gap:7px; box-shadow:0 4px 10px rgba(14,148,96,.3); }
+.inicio-btn.show { display:flex; }
+.inicio-btn:disabled { opacity:.6; cursor:wait; }
+.inicio-ok { display:none; margin-top:10px; padding:9px 12px; border-radius:var(--radius-sm); background: var(--green-soft); color: var(--green-dark); font-size:12.5px; font-weight:700; align-items:center; gap:7px; }
+.inicio-ok.show { display:flex; }
+
+/* ---- Visitas pendientes de envío (modo sin señal) ---- */
+.pend-banner { display:none; background: var(--orange-soft); border:1.5px solid var(--orange); border-radius: var(--radius); padding:10px 12px; margin-bottom:1rem; align-items:center; gap:10px; }
+.pend-banner.show { display:flex; }
+.pend-banner .p-icon { color: var(--orange-dark); font-size:20px; flex-shrink:0; }
+.pend-banner .p-text { flex:1; font-size:12px; color: var(--orange-dark); font-weight:600; line-height:1.4; }
+.pend-banner button { border:none; background: var(--orange); color:#fff; padding:8px 12px; border-radius:8px; font-size:12px; font-weight:700; cursor:pointer; flex-shrink:0; }
+
+/* ---- Modal de historial ---- */
+.hist-overlay { position:fixed; inset:0; background:rgba(10,20,50,.5); z-index:900; display:none; align-items:flex-end; justify-content:center; }
+.hist-overlay.show { display:flex; }
+.hist-sheet { background:var(--surface); border-radius:20px 20px 0 0; width:100%; max-width:520px; max-height:82vh; display:flex; flex-direction:column; box-shadow:var(--shadow-pop); }
+.hist-head { padding:1rem 1.25rem; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
+.hist-head h3 { font-size:15px; color:var(--blue-dark); display:flex; align-items:center; gap:7px; }
+.hist-close { border:none; background:var(--surface-alt); width:32px; height:32px; border-radius:9px; font-size:16px; color:var(--ink-soft); cursor:pointer; }
+.hist-body { overflow-y:auto; padding: .75rem 1.25rem 1.5rem; }
+.hist-date { font-size:11.5px; font-weight:800; color:var(--ink-faint); text-transform:uppercase; letter-spacing:.5px; margin:14px 0 6px; display:flex; align-items:center; gap:8px; }
+.hist-date b { color:var(--blue-dark); }
+.hist-visit { background:var(--surface-alt); border-radius:var(--radius-sm); padding:9px 12px; margin-bottom:6px; }
+.hist-visit .hv-top { display:flex; justify-content:space-between; gap:8px; }
+.hist-visit .hv-cliente { font-size:13px; font-weight:700; color:var(--ink); }
+.hist-visit .hv-hora { font-size:12px; font-weight:700; color:var(--blue-dark); flex-shrink:0; }
+.hist-visit .hv-motivo { font-size:11.5px; color:var(--ink-soft); margin-top:2px; }
+.hist-empty { text-align:center; color:var(--ink-faint); font-size:13px; padding:2rem 1rem; }
+
+/* ---- Buscador de clientes ---- */
+.cliente-wrap { position:relative; }
+.cliente-results { position:absolute; top:calc(100% + 4px); left:0; right:0; background:var(--surface); border:1.5px solid var(--border-strong); border-radius: var(--radius-sm); max-height:250px; overflow-y:auto; z-index:50; box-shadow: var(--shadow-pop); display:none; }
+.cliente-results.show { display:block; }
+.cli-item { padding:10px 12px; cursor:pointer; border-bottom:1px solid var(--border); }
+.cli-item:last-child { border-bottom:none; }
+.cli-item:hover, .cli-item.active { background: var(--blue-soft); }
+.cli-name { font-size:13px; font-weight:600; color:var(--ink); }
+.cli-meta { font-size:11px; color: var(--ink-faint); margin-top:2px; display:flex; gap:8px; align-items:center; }
+.cli-tag { display:inline-block; font-size:10px; font-weight:700; padding:1px 7px; border-radius:20px; }
+.cli-tag.inactivo { background: var(--red-soft); color: var(--red-dark); }
+.cli-tag.visitado { background: var(--green-soft); color: var(--green-dark); }
+.cli-empty { padding:12px; font-size:12.5px; color: var(--ink-faint); }
+.cli-selected { display:none; margin-top:7px; font-size:12px; color: var(--green-dark); font-weight:600; align-items:center; gap:5px; }
+.cli-selected.show { display:flex; }
+.cli-selected.prospecto { color: var(--teal-dark); }
+.base-status { font-size:11px; margin-top:6px; display:flex; align-items:center; gap:5px; color: var(--ink-faint); }
+.base-status.err { color: var(--red-dark); font-weight:600; }
+#base-file-btn { display:none; margin-top:8px; }
+.file-pick-btn { width:100%; padding:10px; border:1.5px dashed var(--border-strong); border-radius: var(--radius-sm); background:var(--surface-alt); color: var(--ink-soft); font-size:12.5px; font-weight:600; cursor:pointer; }
+
 .motivo-group { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .motivo-btn { padding: 12px 8px; border: 1.5px solid var(--border-strong); border-radius: var(--radius-sm); background: var(--surface); color: var(--ink-soft); font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all .15s; }
 .motivo-btn:hover { border-color: var(--blue); color: var(--blue-dark); }
@@ -98,6 +169,17 @@ body { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; background
 .submit-btn:disabled { opacity: .4; cursor: not-allowed; box-shadow:none; }
 .submit-btn:not(:disabled):hover { transform: translateY(-1px); }
 .submit-hint { font-size: 11.5px; color: var(--red-dark); text-align: center; margin-top: 8px; min-height: 14px; font-weight: 500; }
+
+/* ---- Aviso de duplicado ---- */
+.dup-overlay { position:fixed; inset:0; background:rgba(10,20,50,.5); z-index:999; display:none; align-items:center; justify-content:center; padding:1.5rem; }
+.dup-overlay.show { display:flex; }
+.dup-box { background:var(--surface); border-radius:var(--radius-lg); padding:1.4rem; max-width:380px; width:100%; box-shadow:var(--shadow-pop); }
+.dup-box h3 { font-size:15px; color:var(--red-dark); display:flex; align-items:center; gap:7px; margin-bottom:8px; }
+.dup-box p { font-size:13px; color:var(--ink-soft); line-height:1.5; margin-bottom:14px; }
+.dup-actions { display:flex; gap:8px; }
+.dup-actions button { flex:1; padding:11px; border-radius:var(--radius-sm); font-size:13px; font-weight:700; cursor:pointer; }
+.dup-cancel { border:1.5px solid var(--border-strong); background:var(--surface); color:var(--ink-soft); }
+.dup-confirm { border:none; background:var(--red); color:#fff; }
 
 .toast { position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%); background: var(--green-dark); color: #fff; padding: 11px 20px; border-radius: var(--radius-sm); font-size: 14px; font-weight: 600; z-index: 9999; opacity: 0; transition: opacity .3s; white-space: nowrap; pointer-events: none; box-shadow: var(--shadow-pop); }
 .toast.show { opacity: 1; }
@@ -127,11 +209,18 @@ body { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; background
   </div>
 
   <div class="content">
+    <!-- Visitas guardadas sin señal, esperando envío -->
+    <div class="pend-banner" id="pend-banner">
+      <i class="ti ti-cloud-upload p-icon"></i>
+      <div class="p-text" id="pend-text"></div>
+      <button onclick="enviarPendientes(true)">Reintentar</button>
+    </div>
+
     <div class="card">
       <div class="card-title"><i class="ti ti-user-circle" style="font-size:16px"></i> Datos del asesor</div>
       <div class="field">
         <label>Asesor</label>
-        <select id="asesor" onchange="checkReady()">
+        <select id="asesor" onchange="onAsesorChange()">
           <option value="">— Selecciona tu nombre —</option>
           <option>JOSUE PINEDA</option>
           <option>MOISES MOLINA</option>
@@ -148,10 +237,47 @@ body { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; background
           <option>CARLOS GRANJA</option>
         </select>
       </div>
-      <div class="field">
-        <label>Cliente visitado <span class="field-hint">(o nombre del prospecto)</span></label>
-        <input type="text" id="cliente" placeholder="Nombre del cliente o prospecto" oninput="checkReady()">
+
+      <!-- Panel: visitas de hoy -->
+      <div class="today-panel" id="today-panel">
+        <div class="today-head">
+          <div class="today-count">
+            <b id="today-count">–</b>
+            <span id="today-label">visitas hoy</span>
+          </div>
+          <button class="today-refresh" onclick="loadToday()" title="Actualizar">
+            <i class="ti ti-refresh"></i>
+          </button>
+        </div>
+        <div class="today-loading" id="today-loading" style="display:none">Consultando visitas de hoy...</div>
+        <button class="inicio-btn" id="inicio-btn" onclick="iniciarActividades()">
+          <i class="ti ti-player-play-filled"></i> Iniciar actividades
+        </button>
+        <div class="inicio-ok" id="inicio-ok"></div>
+        <button class="today-toggle" id="today-toggle" onclick="toggleTodayList()" style="display:none">Ver clientes visitados hoy ▾</button>
+        <div class="today-list" id="today-list"></div>
+        <button class="hist-btn" onclick="abrirHistorial()">
+          <i class="ti ti-history"></i> Ver mi historial
+        </button>
       </div>
+
+      <div class="field">
+        <label>Cliente visitado <span class="field-hint">(busca en tu cartera o escribe un prospecto)</span></label>
+        <div class="cliente-wrap">
+          <input type="text" id="cliente" placeholder="Escribe para buscar tu cliente..." autocomplete="off"
+                 oninput="onClienteInput()" onfocus="onClienteInput()">
+          <div class="cliente-results" id="cliente-results"></div>
+        </div>
+        <div class="cli-selected" id="cli-selected"></div>
+        <div class="base-status" id="base-status"><i class="ti ti-loader-2"></i> Cargando base de clientes...</div>
+        <div id="base-file-btn">
+          <button class="file-pick-btn" onclick="document.getElementById('base-file-input').click()">
+            <i class="ti ti-file-spreadsheet"></i> Cargar archivo Excel de clientes
+          </button>
+          <input type="file" id="base-file-input" accept=".xlsx,.xls" style="display:none" onchange="loadBaseFromFile(this.files[0])">
+        </div>
+      </div>
+
       <div class="field">
         <label>Kilometraje del vehículo</label>
         <input type="number" id="km" placeholder="Ej: 45230" min="0" oninput="checkReady()">
@@ -201,6 +327,31 @@ body { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; background
   </div>
 </div>
 
+<!-- Aviso de posible duplicado -->
+<div class="dup-overlay" id="dup-overlay">
+  <div class="dup-box">
+    <h3><i class="ti ti-alert-triangle"></i> Visita ya registrada hoy</h3>
+    <p id="dup-msg"></p>
+    <div class="dup-actions">
+      <button class="dup-cancel" onclick="closeDup(false)">Cancelar</button>
+      <button class="dup-confirm" onclick="closeDup(true)">Registrar de todos modos</button>
+    </div>
+  </div>
+</div>
+
+<!-- Historial del asesor -->
+<div class="hist-overlay" id="hist-overlay" onclick="if(event.target===this)cerrarHistorial()">
+  <div class="hist-sheet">
+    <div class="hist-head">
+      <h3><i class="ti ti-history"></i> <span id="hist-title">Mi historial</span></h3>
+      <button class="hist-close" onclick="cerrarHistorial()"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="hist-body" id="hist-body">
+      <div class="hist-empty">Cargando...</div>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -208,16 +359,420 @@ body { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; background
 //  PEGA AQUÍ TU URL DE GOOGLE APPS SCRIPT  (termina en /exec)
 // ============================================================
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyfU4JbCUT6eqThx_0h2KYU3hEKIcgkC1ep0_vYunQd_gtkk4sqt63pFWdslaj6QpK6zw/exec';
+
+// Nombre del archivo Excel con la base de clientes (debe estar en la
+// misma carpeta que este index.html; reemplázalo cuando actualices la base)
+const BASE_XLSX = 'clientes.xlsx';
 // ============================================================
+
+// Mapa: nombre del asesor en el formulario → nombre del vendedor en el Excel
+const ASESOR_VENDEDOR = {
+  'JOSUE PINEDA':       'PINEDA MACAS JOSUE MIGUEL',
+  'MOISES MOLINA':      'MOLINA VILLALBA JOSE MOISES',
+  'CARLOS HERRERA':     'HERRERA PAREDES CARLOS ANDRES',
+  'DANIEL ESPAÑA':      'ESPAÑA SIERRA DANIEL TRIFON',
+  'FERNANDO MEZA':      'MEZA VERA JIMMY FERNANDO',
+  'CRISTIAN SALAZAR':   'SALAZAR CAICEDO CRISTIAN NEY',
+  'CRISTINA CIFUENTES': 'CIFUENTES ROSAS CRISTINA GUADALUPE',
+  'PABLO PERALTA':      'PERALTA PEÑA PABLO MANUEL',
+  'SEBASTIAN VANEGAS':  'VANEGAS GUAMAN JAVIER SEBASTIAN',
+  'EDISON MAYORGA':     'MAYORGA COLOMA EDISON SANTIAGO',
+  'EDUARDO PICO':       'PICO GRANDA VICTOR EDUARDO'
+  // DIEGO ACHACHI y CARLOS GRANJA: sin cartera en la base → escriben libre
+};
 
 let selectedMotivos = [];
 let locationData    = null;
+let baseClientes    = [];   // toda la base
+let clientesAsesor  = [];   // cartera del asesor seleccionado
+let visitasHoy      = [];   // visitas de hoy del asesor
+let clienteElegido  = null; // cliente seleccionado de la lista (o null si es texto libre)
+let dupConfirmado   = false;
+let enviando        = false;
 
-function api(params) {
+function api(params, timeoutMs) {
   const url = SCRIPT_URL + '?' + new URLSearchParams(params).toString();
-  return fetch(url, { redirect: 'follow' }).then(r => r.json());
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), timeoutMs || 12000);
+  return fetch(url, { redirect: 'follow', signal: ctrl.signal })
+    .then(r => r.json())
+    .finally(() => clearTimeout(t));
 }
 
+/* ============ COLA DE PENDIENTES (modo sin señal, estilo WhatsApp) ============
+   Si al guardar no hay internet, la visita se guarda en el teléfono y se
+   reenvía automáticamente cuando vuelve la señal. El servidor rechaza
+   duplicados por id, así que reintentar nunca duplica registros. */
+const PEND_KEY = 'visitas_pendientes_v1';
+let enviandoPendientes = false;
+
+function getPendientes() {
+  try { return JSON.parse(localStorage.getItem(PEND_KEY)) || []; }
+  catch (e) { return []; }
+}
+function setPendientes(arr) {
+  try { localStorage.setItem(PEND_KEY, JSON.stringify(arr)); } catch (e) {}
+  renderPendientes();
+}
+function renderPendientes() {
+  const n = getPendientes().length;
+  const banner = document.getElementById('pend-banner');
+  if (!n) { banner.className = 'pend-banner'; return; }
+  document.getElementById('pend-text').textContent =
+    n === 1
+      ? '1 visita guardada en tu teléfono, pendiente de envío. Se enviará sola cuando haya señal.'
+      : n + ' visitas guardadas en tu teléfono, pendientes de envío. Se enviarán solas cuando haya señal.';
+  banner.className = 'pend-banner show';
+}
+
+async function enviarPendientes(manual) {
+  if (enviandoPendientes) return;
+  let cola = getPendientes();
+  if (!cola.length) return;
+  enviandoPendientes = true;
+
+  let enviadas = 0;
+  const restantes = [];
+  for (const payload of cola) {
+    try {
+      const res = await api(payload, 15000);
+      if (res.ok) enviadas++;
+      else restantes.push(payload);
+    } catch (e) {
+      restantes.push(payload); // sigue sin señal: se queda en la cola
+    }
+  }
+  setPendientes(restantes);
+  enviandoPendientes = false;
+
+  if (enviadas) {
+    showToast('✓ ' + enviadas + (enviadas === 1 ? ' visita pendiente enviada' : ' visitas pendientes enviadas'), false);
+    loadToday();
+  } else if (manual) {
+    showToast('Aún sin conexión. Se reintentará automáticamente.', true);
+  }
+}
+
+// Reintento automático: cuando vuelve el internet y cada 45 segundos
+window.addEventListener('online', () => enviarPendientes(false));
+setInterval(() => { if (navigator.onLine) enviarPendientes(false); }, 45000);
+
+/* ================= BASE DE CLIENTES (Excel) ================= */
+function normalizar(s) {
+  return String(s || '').toUpperCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ').trim();
+}
+
+function procesarFilas(rows) {
+  const vistos = new Set();
+  baseClientes = [];
+  rows.forEach(r => {
+    const nombre = String(r['Nombre Comercial'] || r['Razón Social'] || '').trim();
+    if (!nombre) return;
+    // Quita duplicados de la base (misma identificación o mismo nombre+vendedor)
+    const clave = (r['identificacion'] || '') + '|' + normalizar(nombre) + '|' + normalizar(r['vendedor']);
+    if (vistos.has(clave)) return;
+    vistos.add(clave);
+    baseClientes.push({
+      nombre,
+      nombreNorm: normalizar(nombre),
+      ciudad:   String(r['ciudad'] || '').trim(),
+      vendedor: normalizar(r['vendedor']),
+      activo:   String(r['estado']) !== '0'
+    });
+  });
+}
+
+function baseCargada(origen) {
+  const st = document.getElementById('base-status');
+  st.className = 'base-status';
+  st.innerHTML = '<i class="ti ti-database"></i> Base cargada: ' + baseClientes.length + ' clientes' + (origen ? ' (' + origen + ')' : '');
+  document.getElementById('base-file-btn').style.display = 'none';
+  onAsesorChange(true);
+}
+
+async function cargarBase() {
+  try {
+    const resp = await fetch(BASE_XLSX);
+    if (!resp.ok) throw new Error('no encontrado');
+    const buf = await resp.arrayBuffer();
+    const wb  = XLSX.read(buf, { type: 'array' });
+    const ws  = wb.Sheets[wb.SheetNames[0]];
+    procesarFilas(XLSX.utils.sheet_to_json(ws, { defval: '' }));
+    baseCargada();
+  } catch (e) {
+    const st = document.getElementById('base-status');
+    st.className = 'base-status err';
+    st.innerHTML = '<i class="ti ti-alert-circle"></i> No se encontró "' + BASE_XLSX + '". Puedes cargarlo manualmente:';
+    document.getElementById('base-file-btn').style.display = 'block';
+  }
+}
+
+function loadBaseFromFile(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      procesarFilas(XLSX.utils.sheet_to_json(ws, { defval: '' }));
+      baseCargada('archivo local');
+    } catch (err) {
+      showToast('No se pudo leer el Excel', true);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+/* ================= ASESOR + VISITAS DE HOY ================= */
+function onAsesorChange(mantener) {
+  const asesor = document.getElementById('asesor').value;
+  if (!mantener) {
+    document.getElementById('cliente').value = '';
+    clienteElegido = null;
+    document.getElementById('cli-selected').className = 'cli-selected';
+  }
+  const vendedor = ASESOR_VENDEDOR[asesor] ? normalizar(ASESOR_VENDEDOR[asesor]) : null;
+  clientesAsesor = vendedor ? baseClientes.filter(c => c.vendedor === vendedor) : [];
+
+  const panel = document.getElementById('today-panel');
+  if (asesor) {
+    panel.className = 'today-panel show';
+    loadToday();
+  } else {
+    panel.className = 'today-panel';
+    visitasHoy = [];
+  }
+  checkReady();
+}
+
+const INICIO_TAG = 'INICIO DE ACTIVIDADES';
+
+async function loadToday() {
+  const asesor = document.getElementById('asesor').value;
+  if (!asesor) return;
+  const loading = document.getElementById('today-loading');
+  loading.style.display = 'block';
+  document.getElementById('today-count').textContent = '–';
+  try {
+    const res = await api({ action: 'hoy', asesor });
+    const todas = (res.visitas || []);
+    // Separa la marca de inicio de las visitas reales
+    const inicio = todas.find(v => normalizar(v.cliente) === INICIO_TAG);
+    visitasHoy = todas.filter(v => normalizar(v.cliente) !== INICIO_TAG);
+
+    document.getElementById('today-count').textContent = visitasHoy.length;
+    document.getElementById('today-label').textContent =
+      visitasHoy.length === 1 ? 'visita hoy' : 'visitas hoy';
+    const tg = document.getElementById('today-toggle');
+    tg.style.display = visitasHoy.length ? 'block' : 'none';
+    renderTodayList();
+
+    // Botón / estado de inicio de actividades
+    const btnIni = document.getElementById('inicio-btn');
+    const okIni  = document.getElementById('inicio-ok');
+    if (inicio) {
+      btnIni.className = 'inicio-btn';
+      okIni.innerHTML = '<i class="ti ti-player-play-filled"></i> Actividades iniciadas a las ' + escapeHtml(inicio.hora || '');
+      okIni.className = 'inicio-ok show';
+    } else {
+      btnIni.className = 'inicio-btn show';
+      okIni.className = 'inicio-ok';
+    }
+  } catch (e) {
+    document.getElementById('today-count').textContent = '?';
+    document.getElementById('today-label').textContent = 'sin conexión al servidor';
+  }
+  loading.style.display = 'none';
+}
+
+/* ================= INICIO DE ACTIVIDADES ================= */
+function iniciarActividades() {
+  const asesor = document.getElementById('asesor').value;
+  if (!asesor) return;
+  const btn = document.getElementById('inicio-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="ti ti-loader-2"></i> Obteniendo ubicación...';
+
+  const enviar = (lat, lng, acc) => {
+    const now = new Date();
+    const payload = {
+      action: 'insert',
+      id:     Date.now(),
+      asesor,
+      cliente: INICIO_TAG,
+      km:      parseInt(document.getElementById('km').value) || 0,
+      motivo:  'inicio_actividades',
+      lat, lng, acc,
+      fecha:   now.toISOString().split('T')[0],
+      hora:    now.toTimeString().slice(0, 5)
+    };
+    btn.innerHTML = '<i class="ti ti-loader-2"></i> Registrando inicio...';
+    api(payload).then(res => {
+      if (!res.ok) throw new Error();
+      showToast('✓ Inicio de actividades registrado', false);
+      loadToday();
+    }).catch(() => {
+      // Sin señal: a la cola, y se marca como iniciado localmente
+      const cola = getPendientes(); cola.push(payload); setPendientes(cola);
+      showToast('Sin señal: el inicio quedó guardado y se enviará solo', true);
+      btn.className = 'inicio-btn';
+      const okIni = document.getElementById('inicio-ok');
+      okIni.innerHTML = '<i class="ti ti-player-play-filled"></i> Actividades iniciadas a las ' + payload.hora + ' (pendiente de envío)';
+      okIni.className = 'inicio-ok show';
+    }).finally(() => {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="ti ti-player-play-filled"></i> Iniciar actividades';
+    });
+  };
+
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(
+      pos => enviar(pos.coords.latitude.toFixed(6), pos.coords.longitude.toFixed(6), Math.round(pos.coords.accuracy)),
+      ()  => enviar('', '', ''), // sin GPS igual registra el inicio con la hora
+      { enableHighAccuracy: true, timeout: 12000 }
+    );
+  } else {
+    enviar('', '', '');
+  }
+}
+
+function renderTodayList() {
+  const el = document.getElementById('today-list');
+  el.innerHTML = visitasHoy.map(v =>
+    '<div class="today-item"><span>' + escapeHtml(v.cliente) + '</span><span class="t-hora">' + escapeHtml(v.hora || '') + '</span></div>'
+  ).join('');
+}
+
+function toggleTodayList() {
+  const el = document.getElementById('today-list');
+  const tg = document.getElementById('today-toggle');
+  const abierto = el.classList.toggle('show');
+  tg.textContent = abierto ? 'Ocultar lista ▴' : 'Ver clientes visitados hoy ▾';
+}
+
+/* ================= HISTORIAL DEL ASESOR ================= */
+const MESES = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+const DIAS_SEMANA = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+
+function fechaBonita(f) { // f = "2026-07-06"
+  const [y, m, d] = String(f).split('-').map(Number);
+  if (!y) return f;
+  const dt = new Date(y, m - 1, d);
+  const hoyStr = new Date().toISOString().split('T')[0];
+  const ayer = new Date(); ayer.setDate(ayer.getDate() - 1);
+  if (f === hoyStr) return 'Hoy';
+  if (f === ayer.toISOString().split('T')[0]) return 'Ayer';
+  return DIAS_SEMANA[dt.getDay()] + ' ' + d + ' ' + MESES[m - 1];
+}
+
+async function abrirHistorial() {
+  const asesor = document.getElementById('asesor').value;
+  if (!asesor) return;
+  document.getElementById('hist-title').textContent = 'Historial · ' + asesor;
+  const body = document.getElementById('hist-body');
+  body.innerHTML = '<div class="hist-empty">Cargando tu historial...</div>';
+  document.getElementById('hist-overlay').className = 'hist-overlay show';
+
+  try {
+    const res = await api({ action: 'historial', asesor, dias: 15 });
+    const visitas = res.visitas || [];
+    if (!visitas.length) {
+      body.innerHTML = '<div class="hist-empty">Aún no tienes visitas registradas en los últimos 15 días.</div>';
+      return;
+    }
+    // Agrupar por fecha (ya vienen ordenadas de más reciente a más antigua)
+    const grupos = {};
+    visitas.forEach(v => { (grupos[v.fecha] = grupos[v.fecha] || []).push(v); });
+
+    body.innerHTML = Object.keys(grupos).map(f => {
+      const reales = grupos[f].filter(v => normalizar(v.cliente) !== INICIO_TAG);
+      const items = grupos[f].map(v => {
+        if (normalizar(v.cliente) === INICIO_TAG) {
+          return '<div class="hist-visit" style="background:var(--green-soft)">' +
+            '<div class="hv-top"><span class="hv-cliente" style="color:var(--green-dark)">▶ Inicio de actividades</span>' +
+            '<span class="hv-hora">' + escapeHtml(v.hora || '') + '</span></div></div>';
+        }
+        return '<div class="hist-visit">' +
+          '<div class="hv-top"><span class="hv-cliente">' + escapeHtml(v.cliente) + '</span>' +
+          '<span class="hv-hora">' + escapeHtml(v.hora || '') + '</span></div>' +
+          '<div class="hv-motivo">' + escapeHtml((v.motivo || '').replace(/_/g, ' ')) + '</div>' +
+        '</div>';
+      }).join('');
+      return '<div class="hist-date"><b>' + fechaBonita(f) + '</b> · ' + reales.length +
+             (reales.length === 1 ? ' visita' : ' visitas') + '</div>' + items;
+    }).join('');
+  } catch (e) {
+    body.innerHTML = '<div class="hist-empty">No se pudo cargar el historial. Verifica tu conexión e inténtalo de nuevo.</div>';
+  }
+}
+
+function cerrarHistorial() {
+  document.getElementById('hist-overlay').className = 'hist-overlay';
+}
+
+/* ================= BUSCADOR DE CLIENTES ================= */
+function onClienteInput() {
+  clienteElegido = null;
+  const sel = document.getElementById('cli-selected');
+  sel.className = 'cli-selected';
+  const texto = document.getElementById('cliente').value;
+  const q = normalizar(texto);
+  const box = document.getElementById('cliente-results');
+  const asesor = document.getElementById('asesor').value;
+
+  if (!asesor) { box.className = 'cliente-results'; checkReady(); return; }
+  if (q.length < 2) { box.className = 'cliente-results'; checkReady(); return; }
+
+  const visitadosHoy = new Set(visitasHoy.map(v => normalizar(v.cliente)));
+  const fuente = clientesAsesor.length ? clientesAsesor : baseClientes;
+  const matches = fuente.filter(c => c.nombreNorm.includes(q)).slice(0, 15);
+
+  if (!matches.length) {
+    box.innerHTML = '<div class="cli-empty">No está en tu cartera — se registrará tal como lo escribas <b>(prospecto / cliente nuevo)</b>. Recuerda marcar el motivo "Prospección Cliente" si aplica.</div>';
+    // Indicador permanente bajo el campo
+    sel.innerHTML = '<i class="ti ti-user-search"></i> Cliente nuevo o prospecto (no está en tu cartera)';
+    sel.className = 'cli-selected prospecto show';
+  } else {
+    box.innerHTML = matches.map((c, i) => {
+      const tags = [];
+      if (!c.activo) tags.push('<span class="cli-tag inactivo">inactivo</span>');
+      if (visitadosHoy.has(c.nombreNorm)) tags.push('<span class="cli-tag visitado">visitado hoy</span>');
+      return '<div class="cli-item" onmousedown="elegirCliente(' + i + ')">' +
+        '<div class="cli-name">' + escapeHtml(c.nombre) + '</div>' +
+        '<div class="cli-meta"><span>' + escapeHtml(c.ciudad) + '</span>' + tags.join('') + '</div></div>';
+    }).join('');
+    box._matches = matches;
+  }
+  box.className = 'cliente-results show';
+  checkReady();
+}
+
+function elegirCliente(i) {
+  const box = document.getElementById('cliente-results');
+  const c = box._matches[i];
+  clienteElegido = c;
+  document.getElementById('cliente').value = c.nombre;
+  box.className = 'cliente-results';
+  const sel = document.getElementById('cli-selected');
+  sel.innerHTML = '<i class="ti ti-circle-check"></i> Cliente de tu cartera · ' + escapeHtml(c.ciudad);
+  sel.className = 'cli-selected show';
+  checkReady();
+}
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('.cliente-wrap')) {
+    document.getElementById('cliente-results').className = 'cliente-results';
+  }
+});
+
+function escapeHtml(s) {
+  return String(s || '').replace(/[&<>"']/g, m =>
+    ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
+}
+
+/* ================= MOTIVOS ================= */
 function selectMotivo(m) {
   const i = selectedMotivos.indexOf(m);
   if (i === -1) selectedMotivos.push(m);
@@ -242,6 +797,7 @@ function updateMotivoButtons() {
   });
 }
 
+/* ================= GPS ================= */
 function getLocation() {
   const btn  = document.getElementById('loc-btn');
   const txt  = document.getElementById('loc-text');
@@ -280,63 +836,104 @@ function getLocation() {
   );
 }
 
+/* ================= VALIDACIÓN Y ENVÍO ================= */
 function checkReady() {
   const faltan = [];
-  if (!document.getElementById('asesor').value)        faltan.push('asesor');
-  if (!document.getElementById('cliente').value.trim()) faltan.push('cliente');
-  if (!document.getElementById('km').value)             faltan.push('kilometraje');
-  if (!selectedMotivos.length)                          faltan.push('motivo de visita');
+  if (!document.getElementById('asesor').value)          faltan.push('asesor');
+  if (!document.getElementById('cliente').value.trim())  faltan.push('cliente');
+  if (!document.getElementById('km').value)              faltan.push('kilometraje');
+  if (!selectedMotivos.length)                           faltan.push('motivo de visita');
   if (!locationData)                                     faltan.push('ubicación GPS');
 
-  document.getElementById('submit-btn').disabled = faltan.length > 0;
+  document.getElementById('submit-btn').disabled = faltan.length > 0 || enviando;
   document.getElementById('submit-hint').textContent =
     faltan.length ? 'Falta: ' + faltan.join(', ') : '';
+}
+
+function esDuplicadoHoy(cliente) {
+  const c = normalizar(cliente);
+  return visitasHoy.find(v => normalizar(v.cliente) === c);
+}
+
+function closeDup(confirmar) {
+  document.getElementById('dup-overlay').className = 'dup-overlay';
+  if (confirmar) { dupConfirmado = true; submitForm(); }
 }
 
 async function submitForm() {
   const asesor  = document.getElementById('asesor').value;
   const cliente = document.getElementById('cliente').value.trim();
   const km      = document.getElementById('km').value;
-  if (!asesor || !cliente || !km || !selectedMotivos.length || !locationData) return;
+  if (!asesor || !cliente || !km || !selectedMotivos.length || !locationData || enviando) return;
 
+  // Aviso si el cliente ya fue visitado hoy (evita el doble registro)
+  if (!dupConfirmado) {
+    const dup = esDuplicadoHoy(cliente);
+    if (dup) {
+      document.getElementById('dup-msg').textContent =
+        'Ya registraste una visita a "' + cliente + '" hoy' +
+        (dup.hora ? ' a las ' + dup.hora : '') +
+        '. ¿Seguro que quieres registrar otra visita al mismo cliente?';
+      document.getElementById('dup-overlay').className = 'dup-overlay show';
+      return;
+    }
+  }
+  dupConfirmado = false;
+
+  enviando = true;
   const btn = document.getElementById('submit-btn');
   btn.disabled = true;
   btn.innerHTML = '<i class="ti ti-loader-2" style="font-size:18px"></i> Guardando...';
 
   const now = new Date();
+  const payload = {
+    action:  'insert',
+    id:      Date.now(),
+    asesor,
+    cliente,
+    km:      parseInt(km),
+    motivo:  selectedMotivos.join(', '),
+    lat:     locationData.lat,
+    lng:     locationData.lng,
+    acc:     locationData.acc,
+    fecha:   now.toISOString().split('T')[0],
+    hora:    now.toTimeString().slice(0, 5)
+  };
 
   try {
-    const res = await api({
-      action:  'insert',
-      id:      Date.now(),
-      asesor,
-      cliente,
-      km:      parseInt(km),
-      motivo:  selectedMotivos.join(', '),
-      lat:     locationData.lat,
-      lng:     locationData.lng,
-      acc:     locationData.acc,
-      fecha:   now.toISOString().split('T')[0],
-      hora:    now.toTimeString().slice(0, 5)
-    });
+    const res = await api(payload);
 
     if (res.ok) {
-      showToast('✓ Visita registrada correctamente', false);
+      if (res.dup) {
+        showToast('Esta visita ya estaba registrada (no se duplicó)', true);
+      } else {
+        showToast('✓ Registrada: ' + cliente, false);
+      }
       resetForm();
+      loadToday(); // actualiza el contador del día
     } else {
       throw new Error(res.error || 'Error desconocido');
     }
   } catch(e) {
-    showToast('Error al guardar. Verifica conexión.', true);
-    btn.disabled = false;
-    btn.innerHTML = '<i class="ti ti-circle-check" style="font-size:18px"></i> Registrar visita';
+    // SIN SEÑAL: la visita NO se pierde — queda en el teléfono y se envía sola
+    const cola = getPendientes();
+    cola.push(payload);
+    setPendientes(cola);
+    visitasHoy.push({ cliente: payload.cliente, hora: payload.hora, motivo: payload.motivo });
+    document.getElementById('today-count').textContent = visitasHoy.length;
+    renderTodayList();
+    showToast('Sin señal: visita guardada en tu teléfono, se enviará sola', true);
+    resetForm();
   }
+  enviando = false;
+  checkReady();
 }
 
 function resetForm() {
-  document.getElementById('asesor').value  = '';
   document.getElementById('cliente').value = '';
   document.getElementById('km').value      = '';
+  clienteElegido = null;
+  document.getElementById('cli-selected').className = 'cli-selected';
   selectedMotivos = []; locationData = null;
   updateMotivoButtons();
   document.getElementById('loc-btn').className    = 'loc-btn';
@@ -347,6 +944,7 @@ function resetForm() {
   document.getElementById('submit-btn').innerHTML =
     '<i class="ti ti-circle-check" style="font-size:18px"></i> Registrar visita';
   document.getElementById('submit-hint').textContent = '';
+  // Se mantiene el asesor seleccionado para registrar la siguiente visita más rápido
 }
 
 function showToast(msg, isErr) {
@@ -355,6 +953,10 @@ function showToast(msg, isErr) {
   t.className = 'toast' + (isErr ? ' err' : '') + ' show';
   setTimeout(() => { t.className = 'toast' + (isErr ? ' err' : ''); }, 2800);
 }
+
+cargarBase();
+renderPendientes();
+if (navigator.onLine) enviarPendientes(false);
 </script>
 </body>
 </html>
