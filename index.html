@@ -468,7 +468,9 @@ function procesarFilas(rows) {
   const vistos = new Set();
   baseClientes = [];
   rows.forEach(r => {
-    const nombre = String(r['Nombre Comercial'] || r['Razón Social'] || '').trim();
+    const nombreComercial = String(r['Nombre Comercial'] || '').trim();
+    const razonSocial     = String(r['Razón Social'] || r['Razon Social'] || '').trim();
+    const nombre = nombreComercial || razonSocial;
     if (!nombre) return;
     // Quita duplicados de la base (misma identificación o mismo nombre+vendedor)
     const clave = (r['identificacion'] || '') + '|' + normalizar(nombre) + '|' + normalizar(r['vendedor']);
@@ -476,7 +478,10 @@ function procesarFilas(rows) {
     vistos.add(clave);
     baseClientes.push({
       nombre,
+      razonSocial,
       nombreNorm: normalizar(nombre),
+      // Clave de búsqueda: incluye nombre comercial Y razón social
+      buscarNorm: normalizar(nombre) + ' | ' + normalizar(razonSocial),
       ciudad:   String(r['ciudad'] || '').trim(),
       vendedor: normalizar(r['vendedor']),
       activo:   String(r['estado']) !== '0'
@@ -775,7 +780,7 @@ function onClienteInput() {
 
   const visitadosHoy = new Set(visitasHoy.map(v => normalizar(v.cliente)));
   const fuente = clientesAsesor.length ? clientesAsesor : baseClientes;
-  const matches = fuente.filter(c => c.nombreNorm.includes(q)).slice(0, 15);
+  const matches = fuente.filter(c => (c.buscarNorm || c.nombreNorm).includes(q)).slice(0, 15);
 
   if (!matches.length) {
     box.innerHTML = '<div class="cli-empty">No está en tu cartera — se registrará tal como lo escribas <b>(prospecto / cliente nuevo)</b>. Recuerda marcar el motivo "Prospección Cliente" si aplica.</div>';
@@ -787,8 +792,10 @@ function onClienteInput() {
       const tags = [];
       if (!c.activo) tags.push('<span class="cli-tag inactivo">inactivo</span>');
       if (visitadosHoy.has(c.nombreNorm)) tags.push('<span class="cli-tag visitado">visitado hoy</span>');
+      const rsExtra = (c.razonSocial && normalizar(c.razonSocial) !== c.nombreNorm)
+        ? '<div class="cli-rs" style="font-size:11px;color:var(--ink-soft,#777)">' + escapeHtml(c.razonSocial) + '</div>' : '';
       return '<div class="cli-item" onmousedown="elegirCliente(' + i + ')">' +
-        '<div class="cli-name">' + escapeHtml(c.nombre) + '</div>' +
+        '<div class="cli-name">' + escapeHtml(c.nombre) + '</div>' + rsExtra +
         '<div class="cli-meta"><span>' + escapeHtml(c.ciudad) + '</span>' + tags.join('') + '</div></div>';
     }).join('');
     box._matches = matches;
