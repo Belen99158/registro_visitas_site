@@ -393,10 +393,34 @@ let enviando        = false;
 function api(params, timeoutMs) {
   const url = SCRIPT_URL + '?' + new URLSearchParams(params).toString();
   const ctrl = new AbortController();
-  const t = setTimeout(() => ctrl.abort(), timeoutMs || 12000);
+  // Antes 12s: en celular con Apps Script "dormido" (primer envío del día)
+  // la respuesta suele tardar más y se cancelaba sola. Ahora 25s por defecto.
+  const t = setTimeout(() => ctrl.abort(), timeoutMs || 25000);
   return fetch(url, { redirect: 'follow', signal: ctrl.signal })
     .then(r => r.json())
     .finally(() => clearTimeout(t));
+}
+
+/* Envía un registro reintentando varias veces antes de darlo por "sin señal".
+   El servidor descarta duplicados por id, así que reintentar NUNCA duplica.
+   Solo se considera pendiente cuando el teléfono está realmente sin internet
+   o cuando fallaron todos los reintentos. Esto elimina los falsos
+   "pendiente de envío" con conexión lenta o servidor tardando en despertar. */
+async function apiInsert(payload, intentos) {
+  intentos = intentos || 3;
+  let ultimoError;
+  for (let i = 0; i < intentos; i++) {
+    if (!navigator.onLine) throw new Error('sin internet');
+    try {
+      const res = await api(payload, 25000);
+      if (res && res.ok) return res;          // guardado confirmado por el servidor
+      ultimoError = new Error((res && res.error) || 'respuesta no válida');
+    } catch (e) {
+      ultimoError = e;                          // timeout o corte momentáneo
+    }
+    if (i < intentos - 1) await new Promise(r => setTimeout(r, 1800)); // espera y reintenta
+  }
+  throw ultimoError || new Error('fallo de envío');
 }
 
 /* ============ COLA DE PENDIENTES (modo sin señal, estilo WhatsApp) ============
@@ -659,9 +683,11 @@ function iniciarActividades() {
       hora:    now.toTimeString().slice(0, 5)
     };
     btn.innerHTML = '<i class="ti ti-loader-2"></i> Registrando inicio...';
-    api(payload).then(res => {
-      if (!res.ok) throw new Error();
-      marcarInicioLocal(asesor, payload.hora);
+    apiInsert(payload).then(res => {
+      // Si el servidor devuelve su propia hora, esa es la que manda (clock del
+      // teléfono puede estar adelantado). Si no la devuelve, usa la del equipo.
+      const horaReal = (res && res.hora) ? res.hora : payload.hora;
+      marcarInicioLocal(asesor, horaReal);
       showToast('✓ Inicio de actividades registrado', false);
       loadToday();
     }).catch(() => {
@@ -956,7 +982,7 @@ async function submitForm() {
   };
 
   try {
-    const res = await api(payload);
+    const res = await apiInsert(payload);
 
     if (res.ok) {
       if (res.dup) {
