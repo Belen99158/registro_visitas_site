@@ -360,9 +360,10 @@ body { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; background
 // ============================================================
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyfU4JbCUT6eqThx_0h2KYU3hEKIcgkC1ep0_vYunQd_gtkk4sqt63pFWdslaj6QpK6zw/exec';
 
-// Nombre del archivo Excel con la base de clientes (debe estar en la
-// misma carpeta que este index.html; reemplázalo cuando actualices la base)
-const BASE_XLSX = 'clientes.xlsx';
+// URL del CSV publicado de la hoja de Google Sheets con la base de clientes
+// (Archivo > Compartir > Publicar en la web > CSV). No se sube ningún
+// archivo de clientes al repositorio: los datos se leen en vivo desde aquí.
+const BASE_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTNCuOlWGiZoSyNGmmF3I_0FmeUnKHsazku4otSFOY2R6bGyNXrTb2hR2iSIYDHmAydi4Hra9k0QLrT/pub?gid=0&single=true&output=csv';
 // ============================================================
 
 // Mapa: nombre del asesor en el formulario → nombre del vendedor en el Excel
@@ -523,17 +524,17 @@ function baseCargada(origen) {
 
 async function cargarBase() {
   try {
-    const resp = await fetch(BASE_XLSX);
+    const resp = await fetch(BASE_CSV_URL, { cache: 'no-store' });
     if (!resp.ok) throw new Error('no encontrado');
-    const buf = await resp.arrayBuffer();
-    const wb  = XLSX.read(buf, { type: 'array' });
+    const csv = await resp.text();
+    const wb  = XLSX.read(csv, { type: 'string' });
     const ws  = wb.Sheets[wb.SheetNames[0]];
     procesarFilas(XLSX.utils.sheet_to_json(ws, { defval: '' }));
     baseCargada();
   } catch (e) {
     const st = document.getElementById('base-status');
     st.className = 'base-status err';
-    st.innerHTML = '<i class="ti ti-alert-circle"></i> No se encontró "' + BASE_XLSX + '". Puedes cargarlo manualmente:';
+    st.innerHTML = '<i class="ti ti-alert-circle"></i> No se pudo cargar la base de clientes desde Google Sheets. Puedes cargarla manualmente:';
     document.getElementById('base-file-btn').style.display = 'block';
   }
 }
@@ -579,7 +580,15 @@ function onAsesorChange(mantener) {
 const INICIO_TAG = 'INICIO DE ACTIVIDADES';
 
 // Candado local: recuerda en el teléfono que este asesor ya marcó inicio hoy
-function hoyStr() { return new Date().toISOString().split('T')[0]; }
+// Usa la fecha LOCAL del teléfono (no UTC): con toISOString() el día cambiaba
+// desde las 19:00 hora Ecuador (UTC-5), marcando visitas de la tarde como "mañana".
+function hoyStr(d) {
+  d = d || new Date();
+  const y  = d.getFullYear();
+  const m  = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return y + '-' + m + '-' + dd;
+}
 function inicioKey(asesor) { return 'inicio_' + normalizar(asesor) + '_' + hoyStr(); }
 function inicioLocal(asesor) {
   try { return localStorage.getItem(inicioKey(asesor)); } catch (e) { return null; }
@@ -679,7 +688,7 @@ function iniciarActividades() {
       km:      parseInt(document.getElementById('km').value) || 0,
       motivo:  'inicio_actividades',
       lat, lng, acc,
-      fecha:   now.toISOString().split('T')[0],
+      fecha:   hoyStr(now),
       hora:    now.toTimeString().slice(0, 5)
     };
     btn.innerHTML = '<i class="ti ti-loader-2"></i> Registrando inicio...';
@@ -735,10 +744,9 @@ function fechaBonita(f) { // f = "2026-07-06"
   const [y, m, d] = String(f).split('-').map(Number);
   if (!y) return f;
   const dt = new Date(y, m - 1, d);
-  const hoyStr = new Date().toISOString().split('T')[0];
   const ayer = new Date(); ayer.setDate(ayer.getDate() - 1);
-  if (f === hoyStr) return 'Hoy';
-  if (f === ayer.toISOString().split('T')[0]) return 'Ayer';
+  if (f === hoyStr()) return 'Hoy';
+  if (f === hoyStr(ayer)) return 'Ayer';
   return DIAS_SEMANA[dt.getDay()] + ' ' + d + ' ' + MESES[m - 1];
 }
 
@@ -977,7 +985,7 @@ async function submitForm() {
     lat:     locationData.lat,
     lng:     locationData.lng,
     acc:     locationData.acc,
-    fecha:   now.toISOString().split('T')[0],
+    fecha:   hoyStr(now),
     hora:    now.toTimeString().slice(0, 5)
   };
 
