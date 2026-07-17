@@ -281,6 +281,7 @@ body { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; background
       <div class="field">
         <label>Kilometraje del vehículo</label>
         <input type="number" id="km" placeholder="Ej: 45230" min="0" oninput="checkReady()">
+        <div class="base-status" id="km-hint" style="display:none"></div>
       </div>
       <div class="field">
         <label>Motivo de visita <span class="field-hint">(puedes elegir varios)</span></label>
@@ -567,12 +568,15 @@ function onAsesorChange(mantener) {
   clientesAsesor = vendedor ? baseClientes.filter(c => c.vendedor === vendedor) : [];
 
   const panel = document.getElementById('today-panel');
+  const kmHint = document.getElementById('km-hint');
   if (asesor) {
     panel.className = 'today-panel show';
     loadToday();
+    cargarUltimoKm(asesor);
   } else {
     panel.className = 'today-panel';
     visitasHoy = [];
+    kmHint.style.display = 'none';
   }
   checkReady();
 }
@@ -660,6 +664,27 @@ async function loadToday() {
     else document.getElementById('inicio-btn').className = 'inicio-btn show';
   }
   loading.style.display = 'none';
+}
+
+/* Muestra el último kilometraje registrado por el asesor, para que no
+   tenga que recordarlo de memoria (recorre el historial de los últimos
+   60 días buscando el primer registro con km). */
+async function cargarUltimoKm(asesor) {
+  const hint = document.getElementById('km-hint');
+  try {
+    const res = await api({ action: 'historial', asesor, dias: 60 }, 15000);
+    const visitas = (res && res.visitas) || [];
+    const ultima = visitas.find(v => Number(v.km) > 0);
+    if (ultima) {
+      hint.innerHTML = '<i class="ti ti-gauge"></i> Último km registrado: ' +
+        Number(ultima.km).toLocaleString('es-EC') + ' km (' + fechaBonita(ultima.fecha) + ')';
+      hint.style.display = 'flex';
+    } else {
+      hint.style.display = 'none';
+    }
+  } catch (e) {
+    hint.style.display = 'none';
+  }
 }
 
 /* ================= INICIO DE ACTIVIDADES ================= */
