@@ -725,7 +725,11 @@ function iniciarActividades() {
       showToast('✓ Inicio de actividades registrado', false);
       loadToday();
     }).catch(() => {
-      // Sin señal: a la cola, candado local activado igualmente
+      // Sin señal: a la cola, candado local activado igualmente.
+      // offline=1 le dice al servidor que respete esta hora capturada en el
+      // teléfono (la hora real de la visita), en vez de usar la hora en que
+      // finalmente se logre enviar.
+      payload.offline = '1';
       const cola = getPendientes(); cola.push(payload); setPendientes(cola);
       marcarInicioLocal(asesor, payload.hora);
       showToast('Sin señal: el inicio quedó guardado y se enviará solo', true);
@@ -1029,7 +1033,11 @@ async function submitForm() {
       throw new Error(res.error || 'Error desconocido');
     }
   } catch(e) {
-    // SIN SEÑAL: la visita NO se pierde — queda en el teléfono y se envía sola
+    // SIN SEÑAL: la visita NO se pierde — queda en el teléfono y se envía sola.
+    // offline=1 le dice al servidor que respete esta hora capturada en el
+    // teléfono (la hora real de la visita), en vez de usar la hora en que
+    // finalmente se logre enviar.
+    payload.offline = '1';
     const cola = getPendientes();
     cola.push(payload);
     setPendientes(cola);

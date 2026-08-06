@@ -5,7 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Panel Admin — Registro de Visitas</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.7.0/dist/tabler-icons.min.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
 :root{
   --bg:#EEF2FA;
@@ -145,12 +147,44 @@ table.data-table tbody tr:hover { background: var(--blue-soft); }
 .toast.show { opacity: 1; }
 .toast.err { background: var(--red-dark); }
 
+/* ---- Tabs ---- */
+.tab-bar { display:flex; gap:8px; margin-bottom: 1.1rem; }
+.tab-btn { flex:1; padding:10px; border-radius: var(--radius-sm); border:1.5px solid var(--border-strong); background:var(--surface); color:var(--ink-soft); font-size:13px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; transition: all .15s; }
+.tab-btn.active { background: var(--blue); border-color: var(--blue); color:#fff; }
+
+/* ---- Parámetros por vendedor ---- */
+.pv-grid { display:grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.pv-field label { font-size: 11px; color: var(--ink-soft); margin-bottom: 4px; display:block; font-weight:600; }
+.pv-field select, .pv-field input { width:100%; padding:9px 10px; border:1.5px solid var(--border-strong); border-radius: var(--radius-sm); font-size:13px; background:var(--surface); color:var(--ink); }
+.pv-field select:focus, .pv-field input:focus { outline:none; border-color:var(--blue); box-shadow:0 0 0 3px var(--blue-soft); }
+.pv-field.full { grid-column: 1 / -1; }
+.pv-save { grid-column: 1 / -1; padding:11px; border:none; border-radius:var(--radius-sm); background:var(--blue); color:#fff; font-size:13.5px; font-weight:700; cursor:pointer; margin-top:4px; }
+.pv-save:hover { background:var(--blue-dark); }
+.pv-updated { grid-column: 1 / -1; font-size:11.5px; color:var(--ink-faint); }
+
+/* ---- Recorrido ---- */
+.rc-grid { display:grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items:end; }
+.rc-field label { font-size: 11px; color: var(--ink-soft); margin-bottom: 4px; display:block; font-weight:600; }
+.rc-field select, .rc-field input { width:100%; padding:9px 10px; border:1.5px solid var(--border-strong); border-radius: var(--radius-sm); font-size:13px; background:var(--surface); color:var(--ink); }
+.rc-btn { grid-column: 1 / -1; padding:11px; border:none; border-radius:var(--radius-sm); background:var(--blue); color:#fff; font-size:13.5px; font-weight:700; cursor:pointer; }
+.rc-btn:hover { background:var(--blue-dark); }
+#rc-map { height: 360px; border-radius: var(--radius); overflow:hidden; border:1.5px solid var(--border); margin-top: 1rem; display:none; }
+.rc-stop { font-size:12.5px; color:var(--ink-soft); padding:7px 0; border-top:1px dashed var(--border); display:flex; justify-content:space-between; gap:8px; }
+.rc-stop b { color:var(--blue-dark); }
+.rc-empty { text-align:center; color:var(--ink-faint); font-size:13px; padding:1.5rem 1rem; }
+.rc-semaforo { display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:5px; }
+.rc-semaforo.ok { background: var(--green); }
+.rc-semaforo.bad { background: var(--red); }
+
 @media (min-width: 760px) {
   .content { padding: 1.5rem 1.75rem; }
   .filters-grid { grid-template-columns: repeat(4, 1fr) auto auto; align-items: end; }
   .filter-actions { display: contents; }
   .btn-filter { flex: none; padding: 9px 18px; }
   .stats-row { grid-template-columns: repeat(6, 1fr); }
+  .pv-grid { grid-template-columns: repeat(3, 1fr); }
+  .rc-grid { grid-template-columns: 1fr 1fr auto; }
+  .rc-btn { grid-column: auto; }
 }
 </style>
 </head>
@@ -190,6 +224,19 @@ table.data-table tbody tr:hover { background: var(--blue-soft); }
     </div>
 
     <div id="admin-panel" style="display:none">
+      <div class="tab-bar">
+        <button class="tab-btn active" id="tab-btn-registros" onclick="switchTab('registros')">
+          <i class="ti ti-table" style="font-size:14px"></i> Registros
+        </button>
+        <button class="tab-btn" id="tab-btn-parametros" onclick="switchTab('parametros')">
+          <i class="ti ti-settings" style="font-size:14px"></i> Parámetros por vendedor
+        </button>
+        <button class="tab-btn" id="tab-btn-recorrido" onclick="switchTab('recorrido')">
+          <i class="ti ti-route" style="font-size:14px"></i> Recorrido
+        </button>
+      </div>
+
+      <div id="tab-registros">
       <div class="card">
         <div class="card-title"><i class="ti ti-filter" style="font-size:14px"></i> Filtros</div>
         <div class="filters-grid">
@@ -249,6 +296,130 @@ table.data-table tbody tr:hover { background: var(--blue-soft); }
           </div>
         </div>
       </div>
+      </div><!-- /tab-registros -->
+
+      <div id="tab-parametros" style="display:none">
+        <div class="card">
+          <div class="card-title"><i class="ti ti-user-cog" style="font-size:14px"></i> Editar parámetros de vendedor</div>
+          <div class="pv-grid">
+            <div class="pv-field full">
+              <label>Vendedor</label>
+              <select id="pv-asesor" onchange="fillParamForm(this.value)"></select>
+            </div>
+            <div class="pv-field">
+              <label>Tipo de vehículo</label>
+              <select id="pv-vehiculo">
+                <option value="">—</option>
+                <option value="moto">Moto</option>
+                <option value="auto">Auto</option>
+                <option value="camioneta">Camioneta</option>
+              </select>
+            </div>
+            <div class="pv-field">
+              <label>Combustible</label>
+              <select id="pv-combustible">
+                <option value="">—</option>
+                <option value="extra">Extra</option>
+                <option value="ecopais">Ecopaís</option>
+                <option value="diesel">Diésel</option>
+              </select>
+            </div>
+            <div class="pv-field">
+              <label>Cilindraje / motorización</label>
+              <input type="text" id="pv-cilindraje" placeholder="Ej: 150cc, 1.6L">
+            </div>
+            <div class="pv-field">
+              <label>Rendimiento (km/galón)</label>
+              <input type="number" id="pv-rendimiento" placeholder="Ej: 35" min="0">
+            </div>
+            <div class="pv-field">
+              <label>Marca y modelo</label>
+              <input type="text" id="pv-marca" placeholder="Ej: Yamaha FZ">
+            </div>
+            <div class="pv-field">
+              <label>Placa</label>
+              <input type="text" id="pv-placa" placeholder="Ej: PBX-1234">
+            </div>
+            <div class="pv-field">
+              <label>Estándar de visitas / semana</label>
+              <input type="number" id="pv-estandar" placeholder="6" min="0">
+            </div>
+            <div class="pv-field">
+              <label>Presupuesto cobranzas (mes) $</label>
+              <input type="number" id="pv-pres-cobranzas" placeholder="0" min="0">
+            </div>
+            <div class="pv-field">
+              <label>Presupuesto ventas (mes) $</label>
+              <input type="number" id="pv-pres-ventas" placeholder="0" min="0">
+            </div>
+            <button class="pv-save" onclick="guardarParametro()">
+              <i class="ti ti-device-floppy"></i> Guardar parámetros
+            </button>
+            <div class="pv-updated" id="pv-updated"></div>
+          </div>
+        </div>
+
+        <div class="card" style="padding:0; overflow:hidden;">
+          <div style="padding:1.25rem 1.25rem 0;">
+            <div class="card-title"><i class="ti ti-list" style="font-size:14px"></i> Resumen por vendedor</div>
+          </div>
+          <div style="padding: 0 1.25rem 1.25rem;">
+            <div class="table-wrap" id="pv-table-wrap">
+              <div class="loading"><i class="ti ti-loader-2"></i> Cargando parámetros...</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="tab-recorrido" style="display:none">
+        <div class="card">
+          <div class="card-title"><i class="ti ti-route" style="font-size:14px"></i> Recorrido del día</div>
+          <div class="rc-grid">
+            <div class="rc-field">
+              <label>Vendedor</label>
+              <select id="rc-asesor"></select>
+            </div>
+            <div class="rc-field">
+              <label>Fecha</label>
+              <input type="date" id="rc-fecha">
+            </div>
+            <button class="rc-btn" onclick="verRecorrido()">
+              <i class="ti ti-map-2"></i> Ver recorrido
+            </button>
+          </div>
+          <div id="rc-map"></div>
+          <div id="rc-stops"></div>
+        </div>
+
+        <div class="stats-row" id="rc-stats-row"></div>
+        <div id="rc-viatico-nota" style="font-size:11.5px;color:var(--ink-faint);margin:-0.6rem 0 1rem;"></div>
+
+        <div class="card" id="rc-config-card">
+          <div class="card-title"><i class="ti ti-gas-station" style="font-size:14px"></i> Precio de combustible (global)</div>
+          <div class="pv-grid">
+            <div class="pv-field">
+              <label>Extra ($/galón)</label>
+              <input type="number" id="cfg-extra" min="0" step="0.01">
+            </div>
+            <div class="pv-field">
+              <label>Ecopaís ($/galón)</label>
+              <input type="number" id="cfg-ecopais" min="0" step="0.01">
+            </div>
+            <div class="pv-field">
+              <label>Diésel ($/galón)</label>
+              <input type="number" id="cfg-diesel" min="0" step="0.01">
+            </div>
+            <div class="pv-field">
+              <label>Umbral cumplimiento (%)</label>
+              <input type="number" id="cfg-umbral" min="0" max="100">
+            </div>
+            <button class="pv-save" onclick="guardarConfig()">
+              <i class="ti ti-device-floppy"></i> Guardar precios
+            </button>
+            <div class="pv-updated" id="cfg-updated"></div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -292,6 +463,270 @@ function lockAdmin() {
   document.getElementById('lock-wrap').style.display   = 'block';
   document.getElementById('admin-panel').style.display = 'none';
   document.getElementById('btn-logout').style.display  = 'none';
+}
+
+/* ---- Tabs ---- */
+function switchTab(tab) {
+  document.getElementById('tab-registros').style.display  = tab === 'registros'  ? 'block' : 'none';
+  document.getElementById('tab-parametros').style.display = tab === 'parametros' ? 'block' : 'none';
+  document.getElementById('tab-recorrido').style.display  = tab === 'recorrido'  ? 'block' : 'none';
+  document.getElementById('tab-btn-registros').className  = 'tab-btn' + (tab === 'registros'  ? ' active' : '');
+  document.getElementById('tab-btn-parametros').className = 'tab-btn' + (tab === 'parametros' ? ' active' : '');
+  document.getElementById('tab-btn-recorrido').className  = 'tab-btn' + (tab === 'recorrido'  ? ' active' : '');
+  if (tab === 'parametros') loadParametros();
+  if (tab === 'recorrido')  initRecorrido();
+}
+
+function norm(s) { return String(s || '').toUpperCase().trim(); }
+
+/* ---- Parámetros por vendedor ---- */
+let paramRecords = {};
+
+function populatePvAsesor() {
+  const src = document.getElementById('f-asesor');
+  const dst = document.getElementById('pv-asesor');
+  dst.innerHTML = Array.from(src.options)
+    .filter(o => o.value)
+    .map(o => '<option value="' + o.value + '">' + o.value + '</option>')
+    .join('');
+}
+
+async function loadParametros() {
+  const wrap = document.getElementById('pv-table-wrap');
+  wrap.innerHTML = '<div class="loading"><i class="ti ti-loader-2"></i> Cargando parámetros...</div>';
+  try {
+    const res = await api({ action: 'getParametros' });
+    paramRecords = (res && res.registros) || {};
+  } catch (e) {
+    wrap.innerHTML = '<div class="empty"><i class="ti ti-wifi-off"></i><p>Error al cargar. Verifica conexión.</p></div>';
+    return;
+  }
+  renderParamsTable();
+  fillParamForm(document.getElementById('pv-asesor').value);
+}
+
+function renderParamsTable() {
+  const wrap = document.getElementById('pv-table-wrap');
+  const asesores = Array.from(document.getElementById('pv-asesor').options).map(o => o.value);
+  const rows = asesores.map(asesor => {
+    const r = paramRecords[asesor];
+    return '<tr style="cursor:pointer" onclick="seleccionarPv(\'' + asesor.replace(/'/g, "\\'") + '\')">' +
+      '<td class="td-asesor">' + asesor + '</td>' +
+      '<td>' + (r && r.vehiculo ? r.vehiculo : '<i>sin configurar</i>') + '</td>' +
+      '<td>' + (r ? (r.combustible || '') : '') + '</td>' +
+      '<td>' + (r ? (r.rendimiento || 0) : '') + '</td>' +
+      '<td>' + (r ? (r.estandar || 0) : '') + '</td>' +
+      '<td>$' + (r ? (r.presCobranzas || 0).toLocaleString() : '0') + '</td>' +
+      '<td>$' + (r ? (r.presVentas || 0).toLocaleString() : '0') + '</td>' +
+      '<td class="td-fecha">' + (r ? (r.actualizado || '') : '') + '</td>' +
+    '</tr>';
+  }).join('');
+  wrap.innerHTML =
+    '<table class="data-table">' +
+      '<thead><tr><th>Vendedor</th><th>Vehículo</th><th>Combustible</th><th>Km/gal</th>' +
+      '<th>Visitas/sem</th><th>Presup. cobranzas</th><th>Presup. ventas</th><th>Actualizado</th></tr></thead>' +
+      '<tbody>' + rows + '</tbody>' +
+    '</table>';
+}
+
+function seleccionarPv(asesor) {
+  document.getElementById('pv-asesor').value = asesor;
+  fillParamForm(asesor);
+}
+
+function fillParamForm(asesor) {
+  const r = paramRecords[asesor] || {};
+  document.getElementById('pv-vehiculo').value       = r.vehiculo || '';
+  document.getElementById('pv-combustible').value    = r.combustible || '';
+  document.getElementById('pv-cilindraje').value     = r.cilindraje || '';
+  document.getElementById('pv-rendimiento').value    = r.rendimiento || '';
+  document.getElementById('pv-marca').value          = r.marca || '';
+  document.getElementById('pv-placa').value          = r.placa || '';
+  document.getElementById('pv-estandar').value       = r.estandar || '';
+  document.getElementById('pv-pres-cobranzas').value = r.presCobranzas || '';
+  document.getElementById('pv-pres-ventas').value    = r.presVentas || '';
+  document.getElementById('pv-updated').textContent  = r.actualizado ? ('Última actualización: ' + r.actualizado) : 'Sin configurar todavía';
+}
+
+async function guardarParametro() {
+  const asesor = document.getElementById('pv-asesor').value;
+  if (!asesor) { showToast('Selecciona un vendedor', true); return; }
+  const payload = {
+    action:        'setParametros',
+    asesor,
+    vehiculo:      document.getElementById('pv-vehiculo').value,
+    combustible:   document.getElementById('pv-combustible').value,
+    cilindraje:    document.getElementById('pv-cilindraje').value,
+    rendimiento:   document.getElementById('pv-rendimiento').value || 0,
+    marca:         document.getElementById('pv-marca').value,
+    placa:         document.getElementById('pv-placa').value,
+    estandar:      document.getElementById('pv-estandar').value || 0,
+    presCobranzas: document.getElementById('pv-pres-cobranzas').value || 0,
+    presVentas:    document.getElementById('pv-pres-ventas').value || 0
+  };
+  try {
+    const res = await api(payload);
+    if (!res.ok) throw new Error(res.error || 'error');
+    showToast('✓ Parámetros guardados: ' + asesor, false);
+    await loadParametros();
+  } catch (e) {
+    showToast('No se pudo guardar. Verifica conexión.', true);
+  }
+}
+
+populatePvAsesor();
+
+/* ---- Recorrido ---- */
+let configGlobal = { precioExtra: 0, precioEcopais: 0, precioDiesel: 0, umbral: 75 };
+let rcMap = null;
+
+function initRecorrido() {
+  const src = document.getElementById('f-asesor');
+  const dst = document.getElementById('rc-asesor');
+  if (!dst.options.length) {
+    dst.innerHTML = Array.from(src.options).filter(o => o.value)
+      .map(o => '<option value="' + o.value + '">' + o.value + '</option>').join('');
+  }
+  const fechaInput = document.getElementById('rc-fecha');
+  if (!fechaInput.value) {
+    const hoy = new Date();
+    fechaInput.value = hoy.getFullYear() + '-' + String(hoy.getMonth() + 1).padStart(2, '0') + '-' + String(hoy.getDate()).padStart(2, '0');
+  }
+  if (!allRecords.length) renderAdmin();
+  if (!Object.keys(paramRecords).length) loadParametros();
+  cargarConfig();
+}
+
+async function cargarConfig() {
+  try {
+    const res = await api({ action: 'getConfig' });
+    if (res && res.config) configGlobal = res.config;
+  } catch (e) {}
+  document.getElementById('cfg-extra').value   = configGlobal.precioExtra || '';
+  document.getElementById('cfg-ecopais').value = configGlobal.precioEcopais || '';
+  document.getElementById('cfg-diesel').value  = configGlobal.precioDiesel || '';
+  document.getElementById('cfg-umbral').value  = configGlobal.umbral || 75;
+  document.getElementById('cfg-updated').textContent =
+    configGlobal.actualizado ? ('Última actualización: ' + configGlobal.actualizado) : '';
+}
+
+async function guardarConfig() {
+  const payload = {
+    action: 'setConfig',
+    precioExtra:   document.getElementById('cfg-extra').value || 0,
+    precioEcopais: document.getElementById('cfg-ecopais').value || 0,
+    precioDiesel:  document.getElementById('cfg-diesel').value || 0,
+    umbral:        document.getElementById('cfg-umbral').value || 75
+  };
+  try {
+    const res = await api(payload);
+    if (!res.ok) throw new Error();
+    showToast('✓ Precios de combustible guardados', false);
+    await cargarConfig();
+    const asesor = document.getElementById('rc-asesor').value;
+    const fecha  = document.getElementById('rc-fecha').value;
+    if (asesor && fecha) renderResumenSemanal(asesor, fecha);
+  } catch (e) {
+    showToast('No se pudo guardar. Verifica conexión.', true);
+  }
+}
+
+function verRecorrido() {
+  const asesor = document.getElementById('rc-asesor').value;
+  const fecha  = document.getElementById('rc-fecha').value;
+  if (!asesor || !fecha) { showToast('Selecciona vendedor y fecha', true); return; }
+
+  const visitas = allRecords.filter(r =>
+    norm(r.Asesor) === norm(asesor) &&
+    r.Fecha === fecha &&
+    norm(r.Cliente) !== 'INICIO DE ACTIVIDADES'
+  ).sort((a, b) => String(a.Hora || '').localeCompare(String(b.Hora || '')));
+
+  renderMapa(visitas);
+  renderStops(visitas);
+  renderResumenSemanal(asesor, fecha);
+}
+
+function renderMapa(visitas) {
+  const mapDiv = document.getElementById('rc-map');
+  const puntos = visitas.filter(v => typeof v.Latitud === 'number' && typeof v.Longitud === 'number' && v.Latitud && v.Longitud);
+
+  if (rcMap) { rcMap.remove(); rcMap = null; }
+  if (!puntos.length) { mapDiv.style.display = 'none'; return; }
+  mapDiv.style.display = 'block';
+
+  rcMap = L.map('rc-map');
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap contributors', maxZoom: 19
+  }).addTo(rcMap);
+
+  const latlngs = puntos.map(v => [v.Latitud, v.Longitud]);
+  puntos.forEach((v, i) => {
+    L.marker([v.Latitud, v.Longitud]).addTo(rcMap)
+      .bindPopup('<b>' + (i + 1) + '. ' + (v.Cliente || '') + '</b><br>' + (v.Hora || '') + ' · ' + (v.Motivo || ''));
+  });
+  if (latlngs.length > 1) {
+    L.polyline(latlngs, { color: '#1857D6', weight: 3, dashArray: '6 6' }).addTo(rcMap);
+  }
+  rcMap.fitBounds(latlngs, { padding: [30, 30] });
+  setTimeout(() => rcMap && rcMap.invalidateSize(), 100);
+}
+
+function renderStops(visitas) {
+  const wrap = document.getElementById('rc-stops');
+  if (!visitas.length) {
+    wrap.innerHTML = '<div class="rc-empty">No hay visitas registradas ese día para este vendedor.</div>';
+    return;
+  }
+  wrap.innerHTML = visitas.map((v, i) =>
+    '<div class="rc-stop"><span>' + (i + 1) + '. ' + (v.Cliente || '') +
+    ' <i style="color:var(--ink-faint)">(' + (v.Motivo || '') + ')</i></span><b>' + (v.Hora || '') + '</b></div>'
+  ).join('');
+}
+
+// Semana Lunes-Sábado que contiene la fecha dada (igual que la Sección 4 del formulario)
+function semanaRango(fecha) {
+  const [y, m, d] = fecha.split('-').map(Number);
+  const dt = new Date(y, m - 1, d);
+  const dow = dt.getDay(); // 0=domingo..6=sabado
+  const diff = dow === 0 ? -6 : (1 - dow);
+  const lunes = new Date(dt); lunes.setDate(dt.getDate() + diff);
+  const sabado = new Date(lunes); sabado.setDate(lunes.getDate() + 5);
+  const f = x => x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0') + '-' + String(x.getDate()).padStart(2, '0');
+  return { desde: f(lunes), hasta: f(sabado) };
+}
+
+function renderResumenSemanal(asesor, fecha) {
+  const { desde, hasta } = semanaRango(fecha);
+  const semana = allRecords.filter(r =>
+    norm(r.Asesor) === norm(asesor) && r.Fecha >= desde && r.Fecha <= hasta
+  );
+  const visitasReales = semana.filter(r => norm(r.Cliente) !== 'INICIO DE ACTIVIDADES');
+  const kms = semana.map(r => Number(r.Kilometraje) || 0).filter(k => k > 0);
+  const kmSemana = kms.length > 1 ? (Math.max(...kms) - Math.min(...kms)) : 0;
+
+  const param = paramRecords[asesor] || {};
+  const estandar = param.estandar || 6;
+  const cumplPct = estandar ? Math.round((visitasReales.length / estandar) * 100) : 0;
+  const cumpleOk = cumplPct >= (configGlobal.umbral || 75);
+
+  let viatico = 0;
+  let nota = 'Configura vehículo, combustible y rendimiento del vendedor en "Parámetros por vendedor" para calcular el viático.';
+  if (param.rendimiento > 0 && param.combustible) {
+    const precios = { extra: configGlobal.precioExtra, ecopais: configGlobal.precioEcopais, diesel: configGlobal.precioDiesel };
+    const precio = precios[param.combustible] || 0;
+    const galones = kmSemana / param.rendimiento;
+    viatico = galones * precio;
+    nota = kmSemana.toLocaleString() + ' km ÷ ' + param.rendimiento + ' km/gal ≈ ' + galones.toFixed(1) +
+           ' gal × $' + precio.toFixed(2) + '/gal (' + param.combustible + ')';
+  }
+
+  document.getElementById('rc-stats-row').innerHTML =
+    '<div class="stat accent-blue"><div class="val">' + kmSemana.toLocaleString() + '</div><div class="lbl">Km semana (' + desde + ' a ' + hasta + ')</div></div>' +
+    '<div class="stat accent-green"><div class="val">' + visitasReales.length + ' / ' + estandar + '</div><div class="lbl">Visitas vs estándar</div></div>' +
+    '<div class="stat accent-teal"><div class="val"><span class="rc-semaforo ' + (cumpleOk ? 'ok' : 'bad') + '"></span>' + cumplPct + '%</div><div class="lbl">Cumplimiento visitas</div></div>' +
+    '<div class="stat accent-red"><div class="val">$' + viatico.toFixed(2) + '</div><div class="lbl">Viático estimado semana</div></div>';
+  document.getElementById('rc-viatico-nota').textContent = nota;
 }
 
 /* ---- helper: lista de motivos de un registro ---- */
