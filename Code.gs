@@ -232,7 +232,7 @@ function historial(asesor, dias) {
 /* ================= PARÁMETROS POR VENDEDOR ================= */
 const PARAMS_SHEET = 'Parametros Vendedor';
 const PCOL = { asesor:0, vehiculo:1, cilindraje:2, marca:3, placa:4, combustible:5, rendimiento:6, estandar:7, presCobranzas:8, presVentas:9, actualizado:10 };
-const PARAMS_HEADERS = ['Asesor','Tipo Vehiculo','Cilindraje','Marca y Modelo','Placa','Combustible','Rendimiento (km/gal)','Estandar Visitas Semana','Presupuesto Cobranzas Mes','Presupuesto Ventas Mes','Actualizado'];
+const PARAMS_HEADERS = ['Asesor','Tipo Vehiculo','Cilindraje','Marca y Modelo','Placa','Combustible','Rendimiento (km/gal)','Estandar Visitas Dia','Presupuesto Cobranzas Mes','Presupuesto Ventas Mes','Actualizado'];
 
 function getParamSheet_() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();

@@ -341,7 +341,7 @@ table.data-table tbody tr:hover { background: var(--blue-soft); }
               <input type="text" id="pv-placa" placeholder="Ej: PBX-1234">
             </div>
             <div class="pv-field">
-              <label>Estándar de visitas / semana</label>
+              <label>Estándar de visitas / día</label>
               <input type="number" id="pv-estandar" placeholder="6" min="0">
             </div>
             <div class="pv-field">
@@ -539,7 +539,7 @@ function renderParamsTable() {
   wrap.innerHTML =
     '<table class="data-table">' +
       '<thead><tr><th>Vendedor</th><th>Vehículo</th><th>Combustible</th><th>Km/gal</th>' +
-      '<th>Visitas/sem</th><th>Presup. cobranzas</th><th>Presup. ventas</th><th>Actualizado</th></tr></thead>' +
+      '<th>Visitas/día</th><th>Presup. cobranzas</th><th>Presup. ventas</th><th>Actualizado</th></tr></thead>' +
       '<tbody>' + rows + '</tbody>' +
     '</table>';
 }
@@ -658,7 +658,7 @@ function verRecorrido() {
   ).sort((a, b) => String(a.Hora || '').localeCompare(String(b.Hora || '')));
 
   renderMapa(visitas);
-  renderStops(visitas);
+  renderStops(visitas, asesor);
   renderResumenSemanal(asesor, fecha);
 }
 
@@ -687,13 +687,18 @@ function renderMapa(visitas) {
   setTimeout(() => rcMap && rcMap.invalidateSize(), 100);
 }
 
-function renderStops(visitas) {
+function renderStops(visitas, asesor) {
   const wrap = document.getElementById('rc-stops');
+  const estandarDia = (paramRecords[asesor] && paramRecords[asesor].estandar) || 6;
+  const resumenDia = '<div class="rc-stop" style="border-top:none;font-weight:700">' +
+    '<span><span class="rc-semaforo ' + (visitas.length >= estandarDia ? 'ok' : 'bad') + '"></span>Cumplimiento del día</span>' +
+    '<b>' + visitas.length + ' / ' + estandarDia + '</b></div>';
+
   if (!visitas.length) {
-    wrap.innerHTML = '<div class="rc-empty">No hay visitas registradas ese día para este vendedor.</div>';
+    wrap.innerHTML = resumenDia + '<div class="rc-empty">No hay visitas registradas ese día para este vendedor.</div>';
     return;
   }
-  wrap.innerHTML = visitas.map((v, i) =>
+  wrap.innerHTML = resumenDia + visitas.map((v, i) =>
     '<div class="rc-stop"><span>' + (i + 1) + '. ' + (v.Cliente || '') +
     ' <i style="color:var(--ink-faint)">(' + (v.Motivo || '') + ')</i></span><b>' + (v.Hora || '') + '</b></div>'
   ).join('');
@@ -721,8 +726,9 @@ function renderResumenSemanal(asesor, fecha) {
   const kmSemana = kms.length > 1 ? (Math.max(...kms) - Math.min(...kms)) : 0;
 
   const param = paramRecords[asesor] || {};
-  const estandar = param.estandar || 6;
-  const cumplPct = estandar ? Math.round((visitasReales.length / estandar) * 100) : 0;
+  const estandarDia = param.estandar || 6;
+  const estandarSemana = estandarDia * 6; // Lunes a Sábado (Sección 4 del formulario)
+  const cumplPct = estandarSemana ? Math.round((visitasReales.length / estandarSemana) * 100) : 0;
   const cumpleOk = cumplPct >= (configGlobal.umbral || 75);
 
   let viatico = 0;
@@ -738,7 +744,7 @@ function renderResumenSemanal(asesor, fecha) {
 
   document.getElementById('rc-stats-row').innerHTML =
     '<div class="stat accent-blue"><div class="val">' + kmSemana.toLocaleString() + '</div><div class="lbl">Km semana (' + desde + ' a ' + hasta + ')</div></div>' +
-    '<div class="stat accent-green"><div class="val">' + visitasReales.length + ' / ' + estandar + '</div><div class="lbl">Visitas vs estándar</div></div>' +
+    '<div class="stat accent-green"><div class="val">' + visitasReales.length + ' / ' + estandarSemana + '</div><div class="lbl">Visitas semana (' + estandarDia + '/día × 6 días)</div></div>' +
     '<div class="stat accent-teal"><div class="val"><span class="rc-semaforo ' + (cumpleOk ? 'ok' : 'bad') + '"></span>' + cumplPct + '%</div><div class="lbl">Cumplimiento visitas</div></div>' +
     '<div class="stat accent-red"><div class="val">$' + viatico.toFixed(2) + '</div><div class="lbl">Viático estimado semana</div></div>';
   document.getElementById('rc-viatico-nota').textContent = nota;

@@ -91,6 +91,11 @@ body { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; background
 .today-item .t-hora { color: var(--blue-dark); font-weight:700; flex-shrink:0; }
 .today-toggle { border:none; background:none; color: var(--blue-dark); font-size:11.5px; font-weight:700; cursor:pointer; margin-top:6px; padding:0; }
 .today-loading { font-size:12px; color: var(--ink-faint); }
+.today-goal { margin-top:9px; }
+.today-goal-bar { height:7px; border-radius:5px; background:rgba(24,87,214,.15); overflow:hidden; }
+.today-goal-fill { height:100%; width:0; background:var(--blue); border-radius:5px; transition:width .3s; }
+.today-goal-fill.ok { background:var(--green); }
+#today-goal-text { font-size:11px; color:var(--ink-soft); margin-top:4px; display:block; font-weight:600; }
 .hist-btn { width:100%; margin-top:10px; padding:9px; border:1.5px solid var(--blue); border-radius:var(--radius-sm); background:var(--surface); color:var(--blue-dark); font-size:12.5px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; }
 .hist-btn:hover { background: var(--blue-soft); }
 
@@ -249,6 +254,10 @@ body { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; background
             <i class="ti ti-refresh"></i>
           </button>
         </div>
+        <div class="today-goal" id="today-goal" style="display:none">
+          <div class="today-goal-bar"><div class="today-goal-fill" id="today-goal-fill"></div></div>
+          <span id="today-goal-text"></span>
+        </div>
         <div class="today-loading" id="today-loading" style="display:none">Consultando visitas de hoy...</div>
         <button class="inicio-btn" id="inicio-btn" onclick="iniciarActividades()">
           <i class="ti ti-player-play-filled"></i> Iniciar actividades
@@ -383,6 +392,7 @@ const ASESOR_VENDEDOR = {
   // DIEGO ACHACHI y CARLOS GRANJA: sin cartera en la base → escriben libre
 };
 
+let estandarDiario = 6; // visitas estándar por día (editable por vendedor en el panel admin)
 let selectedMotivos = [];
 let locationData    = null;
 let baseClientes    = [];   // toda la base
@@ -573,12 +583,38 @@ function onAsesorChange(mantener) {
     panel.className = 'today-panel show';
     loadToday();
     cargarUltimoKm(asesor);
+    cargarEstandar(asesor);
   } else {
     panel.className = 'today-panel';
     visitasHoy = [];
     kmHint.style.display = 'none';
   }
   checkReady();
+}
+
+/* Estándar de visitas del día (por defecto 6, editable por vendedor en el
+   panel admin). No bloquea nada: solo se usa para la barra de progreso. */
+async function cargarEstandar(asesor) {
+  estandarDiario = 6;
+  try {
+    const res = await api({ action: 'getParametros' }, 15000);
+    const p = res && res.registros && res.registros[asesor];
+    if (p && p.estandar > 0) estandarDiario = p.estandar;
+  } catch (e) { /* se queda en el default (6) */ }
+  renderTodayGoal();
+}
+
+function renderTodayGoal() {
+  const goal = document.getElementById('today-goal');
+  if (!document.getElementById('asesor').value) { goal.style.display = 'none'; return; }
+  const n = visitasHoy.length;
+  const pct = Math.min(100, Math.round((n / estandarDiario) * 100));
+  const fill = document.getElementById('today-goal-fill');
+  fill.style.width = pct + '%';
+  fill.className = 'today-goal-fill' + (n >= estandarDiario ? ' ok' : '');
+  document.getElementById('today-goal-text').textContent =
+    n + ' / ' + estandarDiario + ' visitas de hoy' + (n >= estandarDiario ? ' ✓' : '');
+  goal.style.display = 'block';
 }
 
 const INICIO_TAG = 'INICIO DE ACTIVIDADES';
@@ -638,6 +674,7 @@ async function loadToday() {
     const tg = document.getElementById('today-toggle');
     tg.style.display = visitasHoy.length ? 'block' : 'none';
     renderTodayList();
+    renderTodayGoal();
     // La lista del día se muestra abierta para que vean sus registros
     if (visitasHoy.length) {
       document.getElementById('today-list').className = 'today-list show';
@@ -1044,6 +1081,7 @@ async function submitForm() {
     visitasHoy.push({ cliente: payload.cliente, hora: payload.hora, motivo: payload.motivo });
     document.getElementById('today-count').textContent = visitasHoy.length;
     renderTodayList();
+    renderTodayGoal();
     showToast('Sin señal: visita guardada en tu teléfono, se enviará sola', true);
     resetForm();
   }
