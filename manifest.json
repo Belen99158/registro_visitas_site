@@ -1,0 +1,12 @@
+{
+  "name": "Registro de Visitas",
+  "short_name": "Visitas",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0A2A6E",
+  "theme_color": "#1857D6",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

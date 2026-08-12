@@ -4,6 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Registro de Visitas</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1857D6">
+<link rel="apple-touch-icon" href="icon.svg">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Visitas">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.7.0/dist/tabler-icons.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -107,11 +113,15 @@ body { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; background
 .inicio-ok.show { display:flex; }
 
 /* ---- Visitas pendientes de envío (modo sin señal) ---- */
-.pend-banner { display:none; background: var(--orange-soft); border:1.5px solid var(--orange); border-radius: var(--radius); padding:10px 12px; margin-bottom:1rem; align-items:center; gap:10px; }
+.pend-banner { display:none; background: var(--orange-soft); border:1.5px solid var(--orange); border-radius: var(--radius); padding:10px 12px; margin-bottom:1rem; align-items:center; gap:10px; animation: pend-pulse 2s ease-in-out infinite; }
 .pend-banner.show { display:flex; }
+.pend-banner.old { border-width:2.5px; background: var(--red-soft); border-color: var(--red); }
+.pend-banner.old .p-icon, .pend-banner.old .p-text { color: var(--red-dark); }
 .pend-banner .p-icon { color: var(--orange-dark); font-size:20px; flex-shrink:0; }
 .pend-banner .p-text { flex:1; font-size:12px; color: var(--orange-dark); font-weight:600; line-height:1.4; }
 .pend-banner button { border:none; background: var(--orange); color:#fff; padding:8px 12px; border-radius:8px; font-size:12px; font-weight:700; cursor:pointer; flex-shrink:0; }
+.pend-banner.old button { background: var(--red); }
+@keyframes pend-pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(217,116,10,.25); } 50% { box-shadow: 0 0 0 6px rgba(217,116,10,0); } }
 
 /* ---- Modal de historial ---- */
 .hist-overlay { position:fixed; inset:0; background:rgba(10,20,50,.5); z-index:900; display:none; align-items:flex-end; justify-content:center; }
@@ -451,14 +461,24 @@ function setPendientes(arr) {
   renderPendientes();
 }
 function renderPendientes() {
-  const n = getPendientes().length;
+  const cola = getPendientes();
+  const n = cola.length;
   const banner = document.getElementById('pend-banner');
   if (!n) { banner.className = 'pend-banner'; return; }
+
+  // Los ids son Date.now(): así sabemos hace cuánto está atascada la más vieja.
+  const masVieja = Math.min(...cola.map(p => Number(p.id) || Date.now()));
+  const horas = (Date.now() - masVieja) / 3600000;
+  const esVieja = horas >= 2;
+
   document.getElementById('pend-text').textContent =
-    n === 1
-      ? '1 visita guardada en tu teléfono, pendiente de envío. Se enviará sola cuando haya señal.'
-      : n + ' visitas guardadas en tu teléfono, pendientes de envío. Se enviarán solas cuando haya señal.';
-  banner.className = 'pend-banner show';
+    (n === 1
+      ? '1 visita guardada en tu teléfono, pendiente de envío.'
+      : n + ' visitas guardadas en tu teléfono, pendientes de envío.') +
+    (esVieja
+      ? ' Llevan más de ' + Math.floor(horas) + ' hora(s) sin enviarse — busca señal o WiFi pronto para no perderlas. Si no agregaste esta página a tu pantalla de inicio, hazlo para evitar que el celular las borre.'
+      : ' Se enviarán solas cuando haya señal.');
+  banner.className = 'pend-banner show' + (esVieja ? ' old' : '');
 }
 
 async function enviarPendientes(manual) {
@@ -1117,6 +1137,17 @@ function showToast(msg, isErr) {
 cargarBase();
 renderPendientes();
 if (navigator.onLine) enviarPendientes(false);
+
+// Le pide al navegador que no borre este sitio bajo presión de espacio
+// (protege la cola de visitas pendientes sin señal). Es "best effort": el
+// navegador puede negarlo, pero no hace daño intentarlo.
+if (navigator.storage && navigator.storage.persist) {
+  navigator.storage.persist().catch(() => {});
+}
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
 </script>
 </body>
 </html>
