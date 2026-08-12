@@ -414,13 +414,18 @@ let enviando        = false;
 
 function api(params, timeoutMs) {
   const url = SCRIPT_URL + '?' + new URLSearchParams(params).toString();
-  const ctrl = new AbortController();
-  // Antes 12s: en celular con Apps Script "dormido" (primer envío del día)
-  // la respuesta suele tardar más y se cancelaba sola. Ahora 25s por defecto.
-  const t = setTimeout(() => ctrl.abort(), timeoutMs || 25000);
-  return fetch(url, { redirect: 'follow', signal: ctrl.signal })
-    .then(r => r.json())
-    .finally(() => clearTimeout(t));
+  const intentar = () => {
+    const ctrl = new AbortController();
+    // Antes 12s: en celular con Apps Script "dormido" (primer envío del día)
+    // la respuesta suele tardar más y se cancelaba sola. Ahora 25s por defecto.
+    const t = setTimeout(() => ctrl.abort(), timeoutMs || 25000);
+    return fetch(url, { redirect: 'follow', signal: ctrl.signal })
+      .then(r => r.json())
+      .finally(() => clearTimeout(t));
+  };
+  // Un reintento: si el primer intento falla justo cuando Apps Script recién
+  // está despertando, el segundo casi siempre entra directo.
+  return intentar().catch(() => intentar());
 }
 
 /* Envía un registro reintentando varias veces antes de darlo por "sin señal".
