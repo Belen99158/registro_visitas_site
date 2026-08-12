@@ -2,8 +2,8 @@
 // (para que el formulario abra aunque no haya señal) y habilita que Chrome/
 // Android ofrezcan "Instalar app". No cachea nada del Apps Script ni la
 // base de clientes: esos siempre se piden en vivo.
-const CACHE = 'registro-visitas-v1';
-const SHELL = ['./', './index.html', './admin.html', './manifest.json', './icon.svg'];
+const CACHE = 'registro-visitas-v2';
+const SHELL = ['./', './index.html', './admin.html', './manifest.json', './icon.svg', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)));
